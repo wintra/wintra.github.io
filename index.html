@@ -1,0 +1,639 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;padding-block:env(safe-area-inset-top,0px) env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}img{max-width:100%}</style>
+<title>강릉 워크샵 게임</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* 레이아웃: 폰 한 칸짜리 앱. 홈은 게임별 색 블록 3개를 세로로 쌓고,
+   게임 화면은 상단 바 + 큰 카드 한 장 + 하단에 붙는 큰 버튼. */
+:root{
+  --bg:#e9eff4; --surface:#ffffff; --fg:#0f1f2c; --muted:#566878; --line:#cfdae3; --soft:#dbe5ec;
+  --mafia:#c92a2a; --tele:#3b5bdb; --o1:#1971c2; --o2:#c2255c; --warn:#e8a100; --on-c:#ffffff;
+  --c0:#e8590c; --c1:#1971c2; --c2:#7048e8; --c3:#0c8599; --c4:#c2255c; --c5:#2f9e44;
+  --font-d:'Black Han Sans','Noto Sans KR','Noto Sans CJK KR','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  --font-b:'Noto Sans KR','Noto Sans CJK KR','Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#09151f; --surface:#102130; --fg:#e7eef4; --muted:#8fa3b3; --line:#223a4d; --soft:#16293a;
+    --mafia:#ff6b6b; --tele:#7c93ff; --o1:#4dabf7; --o2:#f783ac; --warn:#ffc53d; --on-c:#0a1520;
+    --c0:#ff922b; --c1:#4dabf7; --c2:#9775fa; --c3:#3bc9db; --c4:#f783ac; --c5:#69db7c;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#09151f; --surface:#102130; --fg:#e7eef4; --muted:#8fa3b3; --line:#223a4d; --soft:#16293a;
+  --mafia:#ff6b6b; --tele:#7c93ff; --o1:#4dabf7; --o2:#f783ac; --warn:#ffc53d; --on-c:#0a1520;
+  --c0:#ff922b; --c1:#4dabf7; --c2:#9775fa; --c3:#3bc9db; --c4:#f783ac; --c5:#69db7c;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{
+  margin:0; background:var(--bg); color:var(--fg); font:400 16px/1.6 var(--font-b);
+  padding-block:0 28px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  -webkit-text-size-adjust:100%;
+}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:520px;margin:0 auto}
+button,a{font-family:inherit}
+:focus-visible{outline:3px solid var(--tc,var(--tele));outline-offset:2px}
+.disp,.kw,.qprompt,.qopen,.opt b,.vs,.tnum,.beat span,.backface .mark,.m-sec h3{font-family:var(--font-d);font-weight:900;font-synthesis:none}
+.disp{letter-spacing:-.01em}
+.muted{color:var(--muted)}
+
+/* 홈 */
+.home-head{padding:36px 0 20px}
+.eyebrow{font:500 13px/1 var(--font-b);letter-spacing:.16em;color:var(--muted);text-transform:uppercase}
+.home-head h1{margin:12px 0 10px;font-size:46px;line-height:1.05}
+.home-head p{margin:0;color:var(--muted);max-width:28em}
+.tiles{display:grid;gap:14px;margin-top:6px}
+.tile{display:block;position:relative;text-decoration:none;border-radius:18px;padding:20px 64px 20px 20px;background:var(--tc);color:var(--on-c);min-height:148px}
+.tile small{display:block;font-size:13px;font-weight:700;opacity:.9}
+.tile h3{margin:8px 0 6px;font-size:34px;line-height:1.1}
+.tile p{margin:0;font-size:15px;line-height:1.5;opacity:.95}
+.tile .go{position:absolute;right:20px;bottom:18px;font-size:28px;line-height:1}
+.pips{display:flex;gap:6px;margin-top:12px}
+.pips i{width:14px;height:14px;border-radius:50%;background:var(--pc);border:2px solid var(--on-c)}
+.home-foot{margin-top:22px}
+
+/* 공통 컨트롤 */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;display:flex;align-items:center;gap:12px;height:60px;background:var(--bg)}
+.bar h2{margin:0;font-size:24px;line-height:1}
+.back{display:inline-flex;align-items:center;min-height:44px;padding:0 16px 0 12px;border-radius:999px;background:var(--surface);border:1.5px solid var(--line);color:var(--fg);text-decoration:none;font-weight:500;font-size:15px}
+.btn{min-height:54px;border-radius:14px;border:0;font:700 17px/1.2 var(--font-b);padding:0 18px;cursor:pointer}
+.btn.pri{background:var(--tc);color:var(--on-c)}
+.btn.sec{background:var(--surface);color:var(--fg);border:1.5px solid var(--line)}
+.btn:disabled{opacity:.45;cursor:default}
+.btn:active:not(:disabled){transform:translateY(1px)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip-btn{min-height:42px;padding:0 15px;border-radius:999px;border:1.5px solid var(--line);background:var(--surface);color:var(--fg);font:500 15px/1 var(--font-b);cursor:pointer}
+.chip-btn[aria-pressed="true"]{background:var(--tc);border-color:var(--tc);color:var(--on-c);font-weight:700}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:14px;background:var(--soft)}
+.seg button{min-height:46px;border:0;border-radius:10px;background:transparent;color:var(--muted);font:700 16px/1 var(--font-b);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 3px rgba(0,0,0,.14)}
+.status{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:14px 2px 0;color:var(--muted);font-size:14px}
+.linkbtn{min-height:40px;padding:0 4px;border:0;background:none;color:var(--tc,var(--tele));font:700 14px var(--font-b);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.opt-row{display:flex;align-items:center;gap:10px;margin:6px 2px 0;font-size:15px}
+.opt-row input{width:22px;height:22px;accent-color:var(--tc)}
+.actions{position:sticky;bottom:0;z-index:4;display:grid;grid-template-columns:1fr 1.5fr;gap:10px;padding:14px 0 calc(10px + env(safe-area-inset-bottom,0px));background:linear-gradient(to top,var(--bg) 78%,transparent)}
+
+/* 게임 카드 */
+.gcard{position:relative;display:flex;flex-direction:column;min-height:350px;margin-top:14px;background:var(--surface);border:1.5px solid var(--line);border-radius:22px;overflow:hidden;cursor:pointer}
+.gband{display:flex;justify-content:space-between;align-items:center;min-height:46px;padding:0 16px;background:var(--tc);color:var(--on-c);font-weight:700;font-size:14px}
+.gbody{flex:1;display:grid;place-items:center;padding:22px 18px;text-align:center;width:100%}
+.gfoot{padding:0 16px 14px;text-align:center;color:var(--muted);font-size:14px}
+.kw{font-family:var(--font-d);color:var(--tc);line-height:1.25;word-break:keep-all;text-wrap:balance}
+.kw.xl{font-size:58px}.kw.l{font-size:46px}.kw.m{font-size:38px}.kw.s{font-size:31px}
+.backface .mark{font-family:var(--font-d);font-size:116px;line-height:1;color:var(--tc);opacity:.3}
+.backface p{margin:6px 0 0;color:var(--muted)}
+.flip{animation:flip .36s ease}
+@keyframes flip{from{transform:rotateY(80deg);opacity:.2}to{transform:none;opacity:1}}
+.timer{display:grid;grid-template-columns:1fr auto;align-items:center;gap:14px;margin:16px 2px 0}
+.track{height:12px;border-radius:6px;background:var(--soft);overflow:hidden}
+.fill{height:100%;width:100%;background:var(--tc)}
+.tnum{min-width:3.4ch;text-align:right;font-family:var(--font-d);font-size:34px;line-height:1;color:var(--tc);font-variant-numeric:tabular-nums}
+
+/* 텔레파시 */
+.qprompt{margin:0 0 20px;font-family:var(--font-d);font-size:28px;line-height:1.3;word-break:keep-all;text-wrap:balance}
+.opts{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:stretch;width:100%}
+.opt{display:flex;flex-direction:column;justify-content:center;gap:8px;min-height:132px;padding:14px 8px;border-radius:16px}
+.opt small{font-size:12px;font-weight:700}
+.opt b{font-family:var(--font-d);font-weight:400;font-size:28px;line-height:1.2;word-break:keep-all}
+.opt.o1{color:var(--o1);border:2px solid var(--o1);background:color-mix(in srgb,var(--o1) 13%,var(--surface))}
+.opt.o2{color:var(--o2);border:2px solid var(--o2);background:color-mix(in srgb,var(--o2) 13%,var(--surface))}
+.vs{align-self:center;font-family:var(--font-d);font-size:18px;color:var(--muted)}
+.qopen{font-family:var(--font-d);line-height:1.35;color:var(--fg);word-break:keep-all;text-wrap:balance}
+.qopen.l{font-size:36px}.qopen.m{font-size:31px}.qopen.s{font-size:27px}
+.beat{position:absolute;inset:0;z-index:2;display:grid;place-items:center;background:color-mix(in srgb,var(--surface) 95%,transparent)}
+.beat span{font-family:var(--font-d);font-size:110px;line-height:1;color:var(--tc);animation:pop .45s ease}
+@keyframes pop{from{transform:scale(.6);opacity:0}to{transform:none;opacity:1}}
+details.rules{margin-top:18px;padding:0 16px;background:var(--surface);border:1.5px solid var(--line);border-radius:16px}
+details.rules summary{display:flex;align-items:center;min-height:54px;font-weight:700;cursor:pointer}
+details.rules .rb{padding:0 0 16px}
+details.rules h4{margin:14px 0 4px;font-size:15px;color:var(--tc)}
+
+/* 마피아 룰북 */
+.subnav{position:sticky;top:calc(env(safe-area-inset-top,0px) + 60px);z-index:4;display:flex;flex-wrap:wrap;gap:8px;padding:4px 0 12px;background:var(--bg)}
+.m-sec{padding-top:24px;scroll-margin-top:132px}
+.m-sec h3{margin:0 0 12px;font-family:var(--font-d);font-weight:400;font-size:27px;line-height:1.2;color:var(--mafia)}
+.m-sec h4{margin:18px 0 6px;font-size:17px}
+.roles{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.roles li{display:grid;grid-template-columns:76px 44px 1fr;align-items:center;gap:8px;padding:11px 0;border-bottom:1px solid var(--line)}
+.roles .desc{color:var(--muted);font-size:14px}
+.chip{display:inline-block;border-radius:8px;padding:3px 10px;color:#fff;font-size:13px;font-weight:700;text-align:center;white-space:nowrap}
+.chip.red{background:#c92a2a}.chip.blue{background:#1971c2}.chip.gray{background:#566878}
+.note{margin-top:12px;padding:12px 14px;border-radius:14px;border:1.5px solid var(--line);background:var(--surface)}
+.note.warn{border-color:var(--warn);background:color-mix(in srgb,var(--warn) 16%,var(--surface))}
+.note.blue{border-color:var(--c1);background:color-mix(in srgb,var(--c1) 11%,var(--surface))}
+.note.red{border-color:var(--mafia);background:color-mix(in srgb,var(--mafia) 10%,var(--surface))}
+.note b{display:block;margin-bottom:2px}
+.flow{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;font-weight:700}
+.flow i{font-style:normal;color:var(--muted)}
+.bul{list-style:none;margin:6px 0 0;padding:0}
+.bul li{position:relative;margin:5px 0;padding-left:16px}
+.bul li::before{content:"";position:absolute;left:2px;top:.72em;width:6px;height:6px;background:var(--mafia)}
+.role-block{margin-top:18px}
+.steps{list-style:none;margin:0;padding:0;display:grid;gap:14px;counter-reset:s}
+.steps li{display:grid;grid-template-columns:30px 1fr;gap:10px;counter-increment:s}
+.steps li::before{content:counter(s);display:grid;place-items:center;width:28px;height:28px;margin-top:2px;border-radius:50%;background:var(--mafia);color:var(--on-c);font-size:14px;font-weight:700}
+.say{font-weight:700;color:var(--c1)}
+.sub{color:var(--muted);font-size:14px}
+
+/* QR 시트, 토스트 */
+.sheet{position:fixed;inset:0;z-index:20;display:grid;align-items:end;justify-items:center;background:rgba(0,0,0,.55)}
+.sheet-card{width:100%;max-width:520px;padding:22px max(20px,env(safe-area-inset-left,0px)) calc(22px + env(safe-area-inset-bottom,0px));border-radius:22px 22px 0 0;background:var(--surface);text-align:center}
+.sheet-card h3{margin:0;font-size:26px}
+#qrbox{display:grid;place-items:center;width:236px;height:236px;margin:16px auto 12px;padding:10px;background:#fff;border-radius:12px;color:#222;font-size:14px}
+#qrbox img,#qrbox canvas{max-width:100%}
+.url{margin:0 0 14px;color:var(--muted);font-size:13px;word-break:break-all;user-select:all}
+.sheet-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom,0px));z-index:30;transform:translateX(-50%);max-width:calc(100% - 32px);padding:11px 16px;border-radius:999px;background:var(--fg);color:var(--bg);font-size:14px;font-weight:700;text-align:center}
+@media (prefers-reduced-motion:reduce){.flip,.beat span{animation:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- 홈 -->
+<section data-view="home">
+  <div class="home-head">
+    <div class="eyebrow">Gangneung Workshop</div>
+    <h1 class="disp">워크샵 게임</h1>
+    <p>마피아 룰북은 QR로, 제시어 카드는 각자 폰으로, 텔레파시는 사회자 폰 한 대로 진행해요.</p>
+  </div>
+  <div class="tiles">
+    <a class="tile" href="#mafia" style="--tc:var(--mafia)">
+      <small>사회자 1명 + 플레이어 9명</small>
+      <h3 class="disp">마피아 룰북</h3>
+      <p>역할, 밤 진행 순서, 낮 투표 규칙을 폰에서 바로 확인</p>
+      <span class="go" aria-hidden="true">→</span>
+    </a>
+    <a class="tile" href="#keywords" style="--tc:var(--c3)">
+      <small>5초 안에 3개 말하기</small>
+      <h3 class="disp">제시어 카드</h3>
+      <p><span id="kwTotal"></span>장 중에서 랜덤으로 뽑기. 내 폰에서 나만 확인</p>
+      <div class="pips" id="pips" aria-hidden="true"></div>
+      <span class="go" aria-hidden="true">→</span>
+    </a>
+    <a class="tile" href="#telepathy" style="--tc:var(--tele)">
+      <small>사회자 폰으로 뽑아서 읽어주기</small>
+      <h3 class="disp">텔레파시 질문</h3>
+      <p>이지선다 <span id="chN"></span>개, 주관식 <span id="opN"></span>개를 랜덤으로</p>
+      <span class="go" aria-hidden="true">→</span>
+    </a>
+  </div>
+  <div class="home-foot"><button class="btn sec" id="shareHome" type="button" style="width:100%">이 게임 링크를 QR로 보여주기</button></div>
+</section>
+
+<!-- 제시어 카드 -->
+<section data-view="keywords" id="v-keywords" hidden>
+  <header class="bar"><a class="back" href="#home">← 홈</a><h2 class="disp">제시어 카드</h2></header>
+  <div class="chips" id="kwChips"></div>
+  <div class="gcard" id="kwCard" role="button" tabindex="0" aria-label="카드 뽑기">
+    <div class="gband"><span id="kwBandL"></span><span id="kwBandR"></span></div>
+    <div class="gbody" id="kwBody" aria-live="polite"></div>
+    <div class="gfoot">5초 안에 3개 말하기</div>
+  </div>
+  <div class="timer" aria-live="off">
+    <div class="track"><div class="fill" id="tFill"></div></div>
+    <div class="tnum" id="tNum">5초</div>
+  </div>
+  <label class="opt-row"><input type="checkbox" id="autoT" checked> 카드를 뽑자마자 5초 시작</label>
+  <div class="status"><span id="kwLeft"></span><button class="linkbtn" id="kwShuffle" type="button">다시 섞기</button></div>
+  <div class="actions">
+    <button class="btn sec" id="kwStart" type="button">5초 시작</button>
+    <button class="btn pri" id="kwNext" type="button">카드 뽑기</button>
+  </div>
+</section>
+
+<!-- 텔레파시 -->
+<section data-view="telepathy" id="v-telepathy" hidden style="--tc:var(--tele)">
+  <header class="bar"><a class="back" href="#home">← 홈</a><h2 class="disp">텔레파시 질문</h2></header>
+  <div class="seg" id="tSeg">
+    <button type="button" data-t="choice" aria-pressed="true">이지선다</button>
+    <button type="button" data-t="open" aria-pressed="false">주관식</button>
+  </div>
+  <div class="chips" id="tChips" style="margin-top:12px" hidden></div>
+  <div class="gcard" id="tCard" role="button" tabindex="0" aria-label="다음 질문 뽑기">
+    <div class="gband"><span id="tBandL"></span><span id="tBandR"></span></div>
+    <div class="gbody" id="tBody" aria-live="polite"></div>
+    <div class="gfoot" id="tFoot"></div>
+    <div class="beat" id="tBeat" hidden><span></span></div>
+  </div>
+  <div class="status"><span id="tLeft"></span><button class="linkbtn" id="tShuffle" type="button">다시 섞기</button></div>
+  <details class="rules" id="tRules">
+    <summary>진행 방법</summary>
+    <div class="rb">
+      <h4>이지선다</h4>
+      <ul class="bul">
+        <li>사회자가 질문과 두 보기를 읽어준다</li>
+        <li>"하나, 둘, 셋!"에 맞춰 1번이면 손가락 1개, 2번이면 2개를 동시에 내민다</li>
+        <li>다수와 같은 쪽을 낸 사람 +1점, 전원이 같으면 전원 +3점</li>
+        <li>5:5로 갈리면 이번 라운드는 무효</li>
+      </ul>
+      <h4>주관식</h4>
+      <ul class="bul">
+        <li>사회자가 질문을 읽어준다</li>
+        <li>3초 동안 생각한 뒤, 사회자가 "하나, 둘, 셋!"</li>
+        <li>모두 동시에 한 단어로 외친다</li>
+        <li>가장 많은 사람과 같은 답이면 +1점, 전원 일치하면 전원 +3점</li>
+        <li>변형: 2명씩 짝을 지어 둘이 똑같은 답을 외치면 성공</li>
+      </ul>
+    </div>
+  </details>
+  <div class="actions">
+    <button class="btn sec" id="tBeatBtn" type="button" disabled>하나·둘·셋!</button>
+    <button class="btn pri" id="tNext" type="button">다음 질문</button>
+  </div>
+</section>
+
+<!-- 마피아 룰북 -->
+<section data-view="mafia" id="v-mafia" hidden style="--tc:var(--mafia)">
+  <header class="bar"><a class="back" href="#home">← 홈</a><h2 class="disp">마피아 룰북</h2></header>
+  <nav class="subnav" aria-label="룰북 목차">
+    <button class="chip-btn" type="button" data-jump="m-roles">역할</button>
+    <button class="chip-btn" type="button" data-jump="m-abil">능력</button>
+    <button class="chip-btn" type="button" data-jump="m-night">밤</button>
+    <button class="chip-btn" type="button" data-jump="m-day">낮</button>
+    <button class="chip-btn" type="button" data-jump="m-rule">규칙</button>
+  </nav>
+
+  <div class="m-sec" id="m-roles" style="padding-top:6px">
+    <h3>역할 구성</h3>
+    <p class="muted" style="margin:0 0 10px">사회자 1명 + 플레이어 9명 = 총 10명</p>
+    <ul class="roles">
+      <li><span class="chip gray">사회자</span><b>1명</b><span class="desc">진행 담당 (플레이 X)</span></li>
+      <li><span class="chip red">마피아</span><b>2명</b><span class="desc">마피아팀</span></li>
+      <li><span class="chip blue">경찰</span><b>1명</b><span class="desc">시민팀</span></li>
+      <li><span class="chip blue">의사</span><b>1명</b><span class="desc">시민팀</span></li>
+      <li><span class="chip blue">시민</span><b>5명</b><span class="desc">시민팀</span></li>
+    </ul>
+    <div class="note warn"><b>* 다른 역할인 척 속이면서 플레이하셔도 됩니다.</b></div>
+
+    <h3 style="margin-top:28px">승리 조건</h3>
+    <div class="note blue" style="margin-top:0"><b>시민팀 승리</b>마피아 2명을 모두 처형하면 승리</div>
+    <div class="note red"><b>마피아팀 승리</b>생존한 마피아 수가 생존한 시민팀 수와 같아지면 승리 (예: 마피아 2 : 시민팀 2)</div>
+
+    <h3 style="margin-top:28px">준비</h3>
+    <ul class="bul">
+      <li>사회자가 역할 쪽지 9장(마피아2·경찰1·의사1·시민5)을 섞어서 1장씩 나눠줌</li>
+      <li>내 역할은 <b>끝까지 비밀!</b> 확인 후 접어서 보관</li>
+    </ul>
+    <div class="note" style="margin-top:16px">
+      <div class="sub" style="text-align:center">게임 흐름</div>
+      <div class="flow" style="justify-content:center"><span>밤</span><i>→</i><span>아침(사망 발표)</span><i>→</i><span>토론</span><i>→</i><span>투표·처형</span></div>
+      <div class="sub" style="text-align:center">승패가 날 때까지 반복</div>
+    </div>
+  </div>
+
+  <div class="m-sec" id="m-abil">
+    <h3>역할별 능력</h3>
+    <div class="role-block" style="margin-top:0"><span class="chip red">마피아 2명</span>
+      <ul class="bul">
+        <li>첫날 밤, 눈을 떠서 <b>서로 정체 확인</b></li>
+        <li>매일 밤 둘이 합의해 <b>1명을 지목</b>, 지목당한 사람은 사망</li>
+        <li>같은 마피아는 지목 불가</li>
+        <li>낮에는 시민인 척 연기!</li>
+      </ul></div>
+    <div class="role-block"><span class="chip blue">경찰 1명</span>
+      <ul class="bul">
+        <li>매일 밤 <b>1명을 지목</b>해 마피아인지 확인</li>
+        <li>사회자가 마피아면 <b>고개 끄덕</b>, 아니면 <b>가로젓기</b></li>
+        <li>정체를 공개할 타이밍은 본인이 판단</li>
+      </ul></div>
+    <div class="role-block"><span class="chip blue">의사 1명</span>
+      <ul class="bul">
+        <li>매일 밤 <b>1명을 지목</b>해 보호</li>
+        <li>마피아가 지목한 사람과 같으면 <b>생존</b></li>
+        <li>자기 자신 보호는 게임 중 <b>1회만</b></li>
+      </ul></div>
+    <div class="role-block"><span class="chip blue">시민 5명</span>
+      <ul class="bul">
+        <li>특수 능력 없음</li>
+        <li>낮 토론과 투표로 마피아를 찾아내기</li>
+      </ul></div>
+    <div class="role-block"><span class="chip gray">사회자</span>
+      <ul class="bul">
+        <li>모든 정체를 알고 공정하게 진행</li>
+        <li>사회자 판정이 최종 결정</li>
+      </ul></div>
+  </div>
+
+  <div class="m-sec" id="m-night">
+    <h3>밤 진행 순서</h3>
+    <p class="sub" style="margin:0 0 14px">사회자 멘트 대본</p>
+    <ol class="steps">
+      <li><div><span class="say">"밤이 되었습니다. 모두 눈을 감아주세요."</span></div></li>
+      <li><div><span class="say">"마피아, 눈을 뜨세요. 죽일 사람을 지목하세요."</span><br><span class="sub">지목 확인 후 "마피아, 눈을 감으세요."</span></div></li>
+      <li><div><span class="say">"경찰, 눈을 뜨세요. 조사할 사람을 지목하세요."</span><br><span class="sub">끄덕/가로젓기로 알려준 뒤 "경찰, 눈을 감으세요."</span></div></li>
+      <li><div><span class="say">"의사, 눈을 뜨세요. 살릴 사람을 지목하세요."</span><br><span class="sub">지목 확인 후 "의사, 눈을 감으세요."</span></div></li>
+      <li><div><span class="say">"아침이 밝았습니다. 모두 눈을 뜨세요."</span></div></li>
+    </ol>
+    <div class="note warn"><b>사회자 팁</b>
+      <ul class="bul">
+        <li>순서는 항상 <b>마피아 → 경찰 → 의사</b></li>
+        <li>지목은 <b>손가락</b>으로만 (말 금지)</li>
+        <li>이미 죽은 역할도 똑같이 호출하고 같은 시간만큼 기다리기 (정체 들킴 방지)</li>
+        <li>밤에 눈 뜬 사람 외에는 <b>눈 감고 고개 숙이기</b></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="m-sec" id="m-day">
+    <h3>낮 진행</h3>
+    <ol class="steps">
+      <li><div><b>사망 발표</b><br><span class="sub">사회자가 사망자 이름만 발표. 의사가 살렸다면 "아무도 죽지 않았습니다"</span></div></li>
+      <li><div><b>자유 토론</b><br><span class="sub">생존자 전원 발언. 거짓말·연기 OK! (제한 시간 3~5분)</span></div></li>
+      <li><div><b>투표</b><br><span class="sub">사회자 "하나, 둘, 셋!"에 동시에 의심되는 사람 지목 → <b>최다 득표 1명 처형</b></span></div></li>
+    </ol>
+    <div class="note"><b>동점이면?</b>동점자만 최후 변론 30초 후 재투표, 또 동점이면 처형 없이 밤으로</div>
+  </div>
+
+  <div class="m-sec" id="m-rule">
+    <h3>꼭 지켜요</h3>
+    <ul class="bul">
+      <li>사망자는 <b>말·표정·눈짓 금지</b> (조용히 관전)</li>
+      <li>처형·사망 시 역할은 <b>공개하지 않음</b></li>
+      <li>역할 쪽지 보여주기, 메모·핸드폰 사용 금지</li>
+      <li>사회자 판정이 최종</li>
+    </ul>
+    <button class="btn sec" id="shareMafia" type="button" style="width:100%;margin-top:26px">이 룰북을 QR로 공유</button>
+  </div>
+</section>
+
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<div class="sheet" id="qrsheet" hidden>
+  <div class="sheet-card" role="dialog" aria-modal="true" aria-labelledby="qrTitle">
+    <h3 class="disp" id="qrTitle">QR 코드</h3>
+    <div id="qrbox"></div>
+    <p class="url" id="qrurl"></p>
+    <div class="sheet-actions">
+      <button class="btn sec" id="qrCopy" type="button">주소 복사</button>
+      <button class="btn pri" id="qrClose" type="button" style="--tc:var(--tele)">닫기</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+(function(){
+'use strict';
+var DATA = {"themes": [{"name": "먹거리", "words": ["라면 브랜드", "치킨 프랜차이즈", "소주 안주", "해장 음식", "편의점 삼각김밥 맛", "햄버거 프랜차이즈", "커피 프랜차이즈", "아이스크림 이름", "중국집 메뉴", "맥주 브랜드", "피자 토핑", "김치로 만든 음식", "고기 부위", "과자 이름", "라면에 넣는 재료", "국물 요리", "분식집 메뉴", "빵집 빵 종류", "음료수 브랜드", "회 종류", "찌개 종류", "밑반찬 종류", "치킨 사이드 메뉴", "과일 이름", "전 종류", "술 종류", "면 요리 (라면 제외)", "편의점 간식", "분식 튀김 종류", "김밥 속재료"]}, {"name": "회사생활", "words": ["회식 메뉴", "사무실 필수품", "월요일에 듣기 싫은 말", "퇴근 직전 듣기 싫은 말", "회의 시간에 하는 행동", "점심 메뉴 후보", "직급 이름", "엑셀 함수", "메신저·협업 툴 이름", "출근길 교통수단", "연말에 하는 일", "회사에서 쓰는 영어 약어", "야근할 때 먹는 것", "휴가 때 하고 싶은 것", "월급날 제일 먼저 하는 일", "상사가 자주 하는 말", "책상 위에 있는 물건", "회사 복지 종류", "출장 가서 하는 일", "퇴사 후 하고 싶은 일", "회의실에 있는 물건", "메일에 쓰는 인사말", "회사 근처 가게 종류", "출근 전에 하는 일", "신입 때 하는 일", "회사 부서 이름", "퇴근 후 하는 일", "사무실에서 나는 소리", "연차 쓰는 이유", "승진하면 좋은 점"]}, {"name": "추억", "words": ["90년대 아이돌 그룹", "문방구 간식", "추억의 만화영화", "어릴 때 한 게임기·콘솔", "추억의 드라마", "학교 급식 메뉴", "학교 앞 불량식품", "쉬는 시간 놀이", "어릴 때 갖고 놀던 장난감", "초등학교 교과목", "싸이월드 기능", "필통에 있던 것", "추억의 과자", "수학여행 장소", "학창시절 체육 종목", "90년대 솔로 가수", "추억의 휴대폰 브랜드", "추억의 예능 프로그램", "추억의 길거리 음식", "추억의 학용품", "90년대 영화", "어릴 때 하던 보드게임", "어릴 때 읽던 만화책", "교실에 있던 물건", "학창시절 동아리", "옛날에 쓰던 전자기기", "초등학교 때 장래희망", "소풍 갈 때 챙기는 것", "옛날 PC방 게임", "추억의 오락실 게임"]}, {"name": "강릉·여행", "words": ["강릉 관광지", "강원도 도시·군 이름", "강릉 먹거리", "바닷가에서 하는 것", "해수욕장 이름", "여행 갈 때 챙길 것", "겨울 스포츠", "캠핑 준비물", "국내 여름휴가 장소", "숙소 종류", "해산물 종류", "우리나라 섬 이름", "휴게소 음식", "여행 중 하는 놀이", "해외 여행 도시", "우리나라 산 이름", "드라이브 때 듣는 노래", "바다에 사는 생물", "차 안에서 하는 게임", "놀이공원 이름", "비 오는 날 하는 것", "여행 갈 때 먹는 간식", "여행 인증샷 장소", "겨울 바다에서 하는 것", "해변 카페 메뉴", "강원도 특산물", "낚시로 잡는 물고기", "모래사장에서 하는 놀이", "숙소에 있는 물건", "여행 후 사오는 기념품"]}, {"name": "연예·문화", "words": ["한국 영화 제목", "천만 관객 영화", "마블 히어로", "디즈니 애니메이션", "넷플릭스 드라마", "개그맨 이름", "트로트 가수", "유튜버 이름", "웹툰 제목", "노래방 십팔번", "남자 배우 이름", "여자 배우 이름", "요즘 아이돌 그룹", "예능 프로그램", "여행 예능", "걸그룹 노래 제목", "발라드 가수", "록밴드 이름", "힙합 가수", "OTT 서비스 이름", "스릴러·공포 영화", "로맨스 영화", "일본 애니메이션", "할리우드 배우", "뮤지컬 제목", "소설 제목", "MC·진행자 이름", "사극 드라마", "가수 겸 배우", "신나는 댄스곡"]}, {"name": "스포츠·취미", "words": ["축구 국가대표 선수", "프로야구 구단", "농구 선수", "올림픽 종목", "구기 종목", "골프 용어", "등산 갈 때 챙길 것", "헬스장 운동 기구", "헬스장에서 하는 운동", "취미 종류", "낚시 용품", "캠핑 장비", "보드게임 이름", "술자리 게임", "모바일 게임 이름", "PC 게임 이름", "운동할 때 듣는 노래", "아웃도어 브랜드", "스포츠 브랜드", "수영장에서 하는 것", "스키장에서 하는 것", "자동차 브랜드", "국내 프로축구팀", "달리기할 때 필요한 것", "무술 종류", "라켓 스포츠", "혼자 하는 취미", "주말에 하는 일", "집에서 하는 운동", "내기 게임 종류"]}], "choices": [{"q": "중국집에 가면?", "a": "짜장면", "b": "짬뽕"}, {"q": "탕수육 소스는?", "a": "부먹", "b": "찍먹"}, {"q": "치킨은?", "a": "후라이드", "b": "양념"}, {"q": "냉면은?", "a": "물냉면", "b": "비빔냉면"}, {"q": "휴가 장소는?", "a": "바다", "b": "산"}, {"q": "더 좋은 계절은?", "a": "여름", "b": "겨울"}, {"q": "회식 술은?", "a": "소주", "b": "맥주"}, {"q": "나는?", "a": "아침형 인간", "b": "저녁형 인간"}, {"q": "고기는?", "a": "삼겹살", "b": "소고기"}, {"q": "근무 방식은?", "a": "재택근무", "b": "사무실 출근"}, {"q": "여행 스타일은?", "a": "계획형", "b": "즉흥형"}, {"q": "반려동물은?", "a": "강아지", "b": "고양이"}, {"q": "커피는?", "a": "아이스 아메리카노", "b": "따뜻한 아메리카노"}, {"q": "붕어빵은?", "a": "팥", "b": "슈크림"}, {"q": "노래방에서는?", "a": "발라드", "b": "댄스곡"}, {"q": "스마트폰은?", "a": "아이폰", "b": "갤럭시"}, {"q": "로또 1등에 당첨되면?", "a": "바로 퇴사", "b": "계속 출근"}, {"q": "타임머신이 있다면?", "a": "과거로", "b": "미래로"}, {"q": "민트초코는?", "a": "좋다", "b": "싫다"}, {"q": "여행 숙소는?", "a": "호텔", "b": "펜션"}, {"q": "라면 끓일 때?", "a": "물 먼저", "b": "스프 먼저"}, {"q": "연휴에는?", "a": "집콕", "b": "여행"}, {"q": "복권 번호는?", "a": "자동", "b": "수동"}, {"q": "회식 2차는?", "a": "노래방", "b": "술집"}], "open": [{"cat": "음식", "q": "라면 하면 떠오르는 브랜드는?"}, {"cat": "음식", "q": "치킨 하면 떠오르는 프랜차이즈는?"}, {"cat": "음식", "q": "회식 하면 떠오르는 메뉴는?"}, {"cat": "음식", "q": "해장 하면 떠오르는 음식은?"}, {"cat": "음식", "q": "소주 안주 1순위는?"}, {"cat": "음식", "q": "편의점 하면 떠오르는 브랜드는?"}, {"cat": "직장", "q": "월요일 하면 떠오르는 단어는?"}, {"cat": "직장", "q": "퇴근 하면 떠오르는 단어는?"}, {"cat": "직장", "q": "상사 하면 떠오르는 단어는?"}, {"cat": "직장", "q": "점심시간 하면 떠오르는 것은?"}, {"cat": "추억", "q": "90년대 하면 떠오르는 가수는?"}, {"cat": "추억", "q": "학교 하면 떠오르는 단어는?"}, {"cat": "추억", "q": "문방구 하면 떠오르는 것은?"}, {"cat": "추억", "q": "어린 시절 하면 떠오르는 만화는?"}, {"cat": "추억", "q": "군대 하면 떠오르는 단어는?"}, {"cat": "여행", "q": "강릉 하면 떠오르는 음식은?"}, {"cat": "여행", "q": "강릉 하면 떠오르는 장소는?"}, {"cat": "여행", "q": "바다 하면 떠오르는 단어는?"}, {"cat": "여행", "q": "여름 하면 떠오르는 과일은?"}, {"cat": "여행", "q": "겨울 하면 떠오르는 간식은?"}, {"cat": "음식", "q": "고기 하면 떠오르는 부위는?"}, {"cat": "직장", "q": "월급 하면 떠오르는 단어는?"}, {"cat": "추억", "q": "초등학교 하면 떠오르는 간식은?"}, {"cat": "여행", "q": "휴가 하면 떠오르는 장소는?"}], "cats": [{"name": "음식", "c": 0}, {"name": "직장", "c": 1}, {"name": "추억", "c": 2}, {"name": "여행", "c": 3}]};
+var $ = function(s, r){ return (r || document).querySelector(s); };
+var $$ = function(s, r){ return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+var cvar = function(i){ return 'var(--c' + i + ')'; };
+var esc = function(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
+var sleep = function(ms){ return new Promise(function(r){ setTimeout(r, ms); }); };
+function buzz(p){ try { if (navigator.vibrate) navigator.vibrate(p); } catch (e) {} }
+
+/* 완전 랜덤: 브라우저 난수로 섞고, 한 바퀴 돌 때까지 같은 카드가 다시 나오지 않음 */
+function rnd(n){
+  try { var b = new Uint32Array(1); crypto.getRandomValues(b); return Math.floor(b[0] / 4294967296 * n); }
+  catch (e) { return Math.floor(Math.random() * n); }
+}
+function shuffle(a){ for (var i = a.length - 1; i > 0; i--){ var j = rnd(i + 1), t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+function Deck(items){ this.items = items; this.last = -1; this.reshuffle(); }
+Deck.prototype.reshuffle = function(){
+  this.order = shuffle(this.items.map(function(_, i){ return i; }));
+  if (this.order.length > 1 && this.order[0] === this.last){
+    var j = 1 + rnd(this.order.length - 1), t = this.order[0]; this.order[0] = this.order[j]; this.order[j] = t;
+  }
+  this.pos = 0;
+};
+Deck.prototype.empty = function(){ return this.pos >= this.order.length; };
+Deck.prototype.left = function(){ return this.order.length - this.pos; };
+Deck.prototype.draw = function(){
+  if (this.empty()) this.reshuffle();
+  var i = this.order[this.pos++]; this.last = i; return this.items[i];
+};
+
+var toastT;
+function toast(m){ var t = $('#toast'); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(function(){ t.hidden = true; }, 2200); }
+
+/* ---------- 화면 전환 (#home, #mafia, #keywords, #telepathy) ---------- */
+var VIEWS = ['home', 'mafia', 'keywords', 'telepathy'];
+var lock = null;
+function wake(on){
+  try {
+    if (on && navigator.wakeLock && !lock){
+      navigator.wakeLock.request('screen').then(function(l){ lock = l; l.addEventListener('release', function(){ lock = null; }); }).catch(function(){});
+    } else if (!on && lock){ lock.release().catch(function(){}); lock = null; }
+  } catch (e) {}
+}
+function route(){
+  var h = location.hash.slice(1);
+  if (VIEWS.indexOf(h) < 0) h = 'home';
+  $$('[data-view]').forEach(function(s){ s.hidden = s.getAttribute('data-view') !== h; });
+  stopTimer(); tpCancelBeat();
+  wake(h === 'keywords' || h === 'telepathy');
+  window.scrollTo(0, 0);
+}
+window.addEventListener('hashchange', route);
+document.addEventListener('visibilitychange', function(){
+  if (document.visibilityState === 'visible'){ var h = location.hash.slice(1); wake(h === 'keywords' || h === 'telepathy'); }
+});
+
+/* ---------- 제시어 카드 ---------- */
+var allItems = [];
+DATA.themes.forEach(function(t, ti){ t.words.forEach(function(w, wi){ allItems.push({ t: ti, w: w, n: wi + 1 }); }); });
+var kw = { mode: 'all', decks: {}, drawn: null, raf: 0 };
+function kwDeck(){
+  var k = String(kw.mode);
+  if (!kw.decks[k]) kw.decks[k] = new Deck(kw.mode === 'all' ? allItems : allItems.filter(function(x){ return x.t === kw.mode; }));
+  return kw.decks[k];
+}
+function fitKw(n){ return n <= 6 ? 'xl' : n <= 9 ? 'l' : n <= 12 ? 'm' : 's'; }
+function kwBuildChips(){
+  var box = $('#kwChips');
+  var html = '<button class="chip-btn" type="button" data-m="all" style="--tc:var(--c3)">전체</button>';
+  DATA.themes.forEach(function(t, i){ html += '<button class="chip-btn" type="button" data-m="' + i + '" style="--tc:' + cvar(i) + '">' + esc(t.name) + '</button>'; });
+  box.innerHTML = html;
+  box.addEventListener('click', function(e){
+    var b = e.target.closest('[data-m]'); if (!b) return;
+    var m = b.getAttribute('data-m'); kw.mode = m === 'all' ? 'all' : Number(m);
+    kw.drawn = null; stopTimer(); kwRender(false);
+  });
+}
+function kwRender(flip){
+  var v = $('#v-keywords'), d = kwDeck();
+  v.style.setProperty('--tc', kw.drawn ? cvar(kw.drawn.t) : (kw.mode === 'all' ? 'var(--c3)' : cvar(kw.mode)));
+  $$('#kwChips .chip-btn').forEach(function(b){ b.setAttribute('aria-pressed', String(b.getAttribute('data-m') === String(kw.mode))); });
+  var body = $('#kwBody');
+  if (!kw.drawn){
+    $('#kwBandL').textContent = kw.mode === 'all' ? '전체 랜덤' : DATA.themes[kw.mode].name;
+    $('#kwBandR').textContent = '';
+    body.innerHTML = '<div class="backface"><div class="mark">?</div><p>카드를 눌러 제시어 뽑기</p></div>';
+  } else {
+    var th = DATA.themes[kw.drawn.t];
+    $('#kwBandL').textContent = th.name;
+    $('#kwBandR').textContent = kw.drawn.n + ' / ' + th.words.length;
+    body.innerHTML = '<div class="kw ' + fitKw(kw.drawn.w.length) + '">' + esc(kw.drawn.w) + '</div>';
+  }
+  if (flip){ body.classList.remove('flip'); void body.offsetWidth; body.classList.add('flip'); }
+  $('#kwLeft').textContent = '남은 카드 ' + d.left() + ' / ' + d.items.length;
+}
+function setTimer(left, done){
+  $('#tFill').style.width = (left / 5000 * 100) + '%';
+  $('#tNum').textContent = done ? '끝!' : (left >= 5000 ? '5초' : String(Math.ceil(left / 1000)));
+}
+function stopTimer(){ if (kw.raf){ cancelAnimationFrame(kw.raf); kw.raf = 0; } setTimer(5000, false); }
+function startTimer(){
+  if (kw.raf) cancelAnimationFrame(kw.raf);
+  var s = performance.now();
+  var step = function(now){
+    var left = Math.max(0, 5000 - (now - s));
+    if (left > 0){ setTimer(left, false); kw.raf = requestAnimationFrame(step); }
+    else { setTimer(0, true); kw.raf = 0; buzz([200, 80, 200]); }
+  };
+  kw.raf = requestAnimationFrame(step);
+}
+function kwDraw(){
+  var d = kwDeck();
+  if (d.empty() && kw.drawn) toast('한 바퀴 돌았어요. 다시 섞었어요');
+  kw.drawn = d.draw(); stopTimer(); kwRender(true);
+  if ($('#autoT').checked) startTimer();
+}
+$('#kwNext').addEventListener('click', kwDraw);
+$('#kwCard').addEventListener('click', kwDraw);
+$('#kwCard').addEventListener('keydown', function(e){ if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); kwDraw(); } });
+$('#kwStart').addEventListener('click', function(){
+  if (!kw.drawn){ var d = kwDeck(); kw.drawn = d.draw(); kwRender(true); }
+  startTimer();
+});
+$('#kwShuffle').addEventListener('click', function(){
+  kwDeck().reshuffle(); kw.drawn = null; stopTimer(); kwRender(false); toast('카드를 다시 섞었어요');
+});
+
+/* ---------- 텔레파시 질문 (사회자 폰) ---------- */
+var tp = { type: 'choice', cat: 'all', decks: {}, cur: null, tok: 0 };
+function tpItems(){
+  if (tp.type === 'choice') return DATA.choices.map(function(x, i){ return { i: i, q: x.q, a: x.a, b: x.b }; });
+  var arr = DATA.open.map(function(x, i){ return { i: i, cat: x.cat, q: x.q }; });
+  return tp.cat === 'all' ? arr : arr.filter(function(x){ return x.cat === tp.cat; });
+}
+function tpDeck(){
+  var k = tp.type + ':' + tp.cat;
+  if (!tp.decks[k]) tp.decks[k] = new Deck(tpItems());
+  return tp.decks[k];
+}
+function tpBuildChips(){
+  var box = $('#tChips');
+  var html = '<button class="chip-btn" type="button" data-c="all" style="--tc:var(--tele)">전체</button>';
+  DATA.cats.forEach(function(c){ html += '<button class="chip-btn" type="button" data-c="' + esc(c.name) + '" style="--tc:' + cvar(c.c) + '">' + esc(c.name) + '</button>'; });
+  box.innerHTML = html;
+  box.addEventListener('click', function(e){
+    var b = e.target.closest('[data-c]'); if (!b) return;
+    tp.cat = b.getAttribute('data-c'); tp.cur = null; tpCancelBeat(); tpRender(false);
+  });
+}
+function fitQ(n){ return n <= 12 ? 'l' : n <= 18 ? 'm' : 's'; }
+function tpRender(flip){
+  var d = tpDeck(), body = $('#tBody'), card = $('#tCard');
+  $$('#tSeg button').forEach(function(b){ b.setAttribute('aria-pressed', String(b.getAttribute('data-t') === tp.type)); });
+  $('#tChips').hidden = tp.type !== 'open';
+  $$('#tChips .chip-btn').forEach(function(b){ b.setAttribute('aria-pressed', String(b.getAttribute('data-c') === tp.cat)); });
+  var cat = null;
+  if (tp.cur && tp.type === 'open') cat = DATA.cats.filter(function(c){ return c.name === tp.cur.cat; })[0];
+  $('#v-telepathy').style.setProperty('--tc', cat ? cvar(cat.c) : 'var(--tele)');
+  if (!tp.cur){
+    $('#tBandL').textContent = tp.type === 'choice' ? '이지선다' : '주관식';
+    $('#tBandR').textContent = '';
+    body.innerHTML = '<div class="backface"><div class="mark">?</div><p>다음 질문을 눌러 시작</p></div>';
+    $('#tFoot').textContent = '사회자 폰으로 뽑아서 읽어주세요';
+  } else if (tp.type === 'choice'){
+    $('#tBandL').textContent = '이지선다';
+    $('#tBandR').textContent = 'No.' + (tp.cur.i + 1);
+    body.innerHTML = '<div style="width:100%"><p class="qprompt">' + esc(tp.cur.q) + '</p><div class="opts">' +
+      '<div class="opt o1"><small>1번 · 손가락 1개</small><b>' + esc(tp.cur.a) + '</b></div><div class="vs">VS</div>' +
+      '<div class="opt o2"><small>2번 · 손가락 2개</small><b>' + esc(tp.cur.b) + '</b></div></div></div>';
+    $('#tFoot').textContent = '하나, 둘, 셋! 동시에 내밀기';
+  } else {
+    $('#tBandL').textContent = '주관식 · ' + tp.cur.cat;
+    $('#tBandR').textContent = 'No.' + (tp.cur.i + 1);
+    body.innerHTML = '<div class="qopen ' + fitQ(tp.cur.q.length) + '">' + esc(tp.cur.q) + '</div>';
+    $('#tFoot').textContent = '하나, 둘, 셋! 동시에 외치기';
+  }
+  if (flip){ body.classList.remove('flip'); void body.offsetWidth; body.classList.add('flip'); }
+  $('#tLeft').textContent = '남은 질문 ' + d.left() + ' / ' + d.items.length;
+  $('#tBeatBtn').disabled = !tp.cur;
+}
+function tpDraw(){
+  var d = tpDeck();
+  if (d.empty() && tp.cur) toast('한 바퀴 돌았어요. 다시 섞었어요');
+  tpCancelBeat(); tp.cur = d.draw(); tpRender(true);
+}
+function tpCancelBeat(){ tp.tok++; var b = $('#tBeat'); if (b) b.hidden = true; }
+function tpBeat(){
+  var token = ++tp.tok, el = $('#tBeat'), sp = el.querySelector('span');
+  el.hidden = false;
+  var steps = [['하나', 650], ['둘', 650], ['셋!', 950]];
+  (function run(i){
+    if (token !== tp.tok) return;
+    if (i >= steps.length){ el.hidden = true; return; }
+    sp.textContent = steps[i][0]; sp.style.animation = 'none'; void sp.offsetWidth; sp.style.animation = '';
+    buzz(30);
+    setTimeout(function(){ run(i + 1); }, steps[i][1]);
+  })(0);
+}
+$('#tNext').addEventListener('click', tpDraw);
+$('#tCard').addEventListener('click', function(){ if ($('#tBeat').hidden) tpDraw(); });
+$('#tCard').addEventListener('keydown', function(e){ if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); tpDraw(); } });
+$('#tBeatBtn').addEventListener('click', tpBeat);
+$('#tBeat').addEventListener('click', function(e){ e.stopPropagation(); });
+$('#tSeg').addEventListener('click', function(e){
+  var b = e.target.closest('[data-t]'); if (!b) return;
+  tp.type = b.getAttribute('data-t'); tp.cat = 'all'; tp.cur = null; tpCancelBeat(); tpRender(false);
+});
+$('#tShuffle').addEventListener('click', function(){ tpDeck().reshuffle(); tp.cur = null; tpCancelBeat(); tpRender(false); toast('질문을 다시 섞었어요'); });
+
+/* ---------- 마피아 룰북 목차 ---------- */
+$$('[data-jump]').forEach(function(b){
+  b.addEventListener('click', function(){
+    var el = document.getElementById(b.getAttribute('data-jump'));
+    if (el) el.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+  });
+});
+
+/* ---------- QR 공유 ---------- */
+function showQR(hash, title){
+  var url = location.href.split('#')[0] + '#' + hash, box = $('#qrbox');
+  box.innerHTML = ''; $('#qrurl').textContent = url; $('#qrTitle').textContent = title;
+  try {
+    if (window.QRCode) new QRCode(box, { text: url, width: 212, height: 212, correctLevel: QRCode.CorrectLevel.M });
+    else box.textContent = 'QR을 불러오지 못했어요. 아래 주소를 직접 공유하세요.';
+  } catch (e) { box.textContent = 'QR을 만들지 못했어요. 아래 주소를 직접 공유하세요.'; }
+  $('#qrsheet').hidden = false; $('#qrClose').focus();
+}
+function closeQR(){ $('#qrsheet').hidden = true; }
+$('#shareHome').addEventListener('click', function(){ showQR('home', '게임 링크 QR'); });
+$('#shareMafia').addEventListener('click', function(){ showQR('mafia', '마피아 룰북 QR'); });
+$('#qrClose').addEventListener('click', closeQR);
+$('#qrsheet').addEventListener('click', function(e){ if (e.target === $('#qrsheet')) closeQR(); });
+document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeQR(); });
+$('#qrCopy').addEventListener('click', function(){
+  var u = $('#qrurl').textContent;
+  var fallback = function(){
+    var r = document.createRange(); r.selectNodeContents($('#qrurl')); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+    toast('주소를 길게 눌러 복사하세요');
+  };
+  try { navigator.clipboard.writeText(u).then(function(){ toast('주소를 복사했어요'); }, fallback); } catch (e) { fallback(); }
+});
+
+/* ---------- 시작 ---------- */
+$('#kwTotal').textContent = allItems.length;
+$('#chN').textContent = DATA.choices.length;
+$('#opN').textContent = DATA.open.length;
+$('#pips').innerHTML = DATA.themes.map(function(_, i){ return '<i style="--pc:' + cvar(i) + '"></i>'; }).join('');
+kwBuildChips(); kwRender(false);
+tpBuildChips(); tpRender(false);
+route();
+})();
+</script>
+</body></html>
