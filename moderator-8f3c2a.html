@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>마피아 진행자 콘솔</title><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script><style>
+*{box-sizing:border-box}body{margin:0;padding:22px;background:#f1f5f9;color:#111827;font-family:system-ui,'Noto Sans KR',sans-serif}.wrap{max-width:760px;margin:auto}.muted{color:#64748b}.card{background:white;border:1px solid #e2e8f0;border-radius:18px;padding:20px;margin:14px 0}.row{display:flex;gap:9px;align-items:center;flex-wrap:wrap}input,button{font:inherit;padding:12px;border-radius:10px}input{border:1px solid #cbd5e1;min-width:0}button{border:0;background:#b91c1c;color:white;font-weight:700;cursor:pointer}button.secondary{background:#e2e8f0;color:#111827}.stat{font-size:34px;font-weight:900}.person,.roleline{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #e2e8f0}.hide{display:none!important}.err{color:#b91c1c}#qr{padding:12px;background:white;width:max-content;margin-top:12px}
+</style></head><body><main class="wrap"><h1>진행자 콘솔</h1><p class="muted">워크샵 마피아 · 관리자 전용</p>
+<section class="card" id="login"><h2>관리자 로그인</h2><div class="row"><input id="email" type="email" placeholder="관리자 이메일"><input id="password" type="password" placeholder="비밀번호"><button id="loginBtn">로그인</button></div><p id="loginMsg" class="err"></p></section>
+<div id="console" class="hide"><section class="card"><div class="row" style="justify-content:space-between"><div><div class="muted">현재 접속 플레이어</div><div id="count" class="stat">0 / 9</div></div><button id="logout" class="secondary">로그아웃</button></div><div id="players"></div></section>
+<section class="card"><h2>역할 배분</h2><div class="roleline"><span>마피아</span><b>2명</b></div><div class="roleline"><span>경찰</span><b>1명</b></div><div class="roleline"><span>의사</span><b>1명</b></div><div class="roleline"><span>시민</span><b>5명</b></div><p class="muted">사회자는 제외하며, 접속 플레이어가 정확히 9명일 때만 배분합니다.</p><div class="row"><button id="assign">9명에게 역할 배분</button><button id="reset" class="secondary">역할 초기화</button></div><p id="result"></p></section>
+<section class="card"><h2>참가 QR 코드</h2><p class="muted">참가자는 QR을 스캔해 자신의 휴대폰으로 접속합니다.</p><div id="qr"></div><p id="joinUrl" class="muted" style="word-break:break-all"></p></section>
+<section class="card"><h2>배정 결과 (진행자 전용)</h2><div id="assigned"></div></section></div></main>
+<script type="module">
+import{initializeApp}from'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
+import{getAuth,signInWithEmailAndPassword,onAuthStateChanged,signOut}from'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
+import{getDatabase,ref,onValue}from'https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js';
+import{getFunctions,httpsCallable}from'https://www.gstatic.com/firebasejs/10.14.1/firebase-functions.js';
+import{firebaseConfig}from'./firebase-config.js';
+const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getDatabase(app),fn=getFunctions(app,'us-central1'),$=id=>document.getElementById(id);
+const names={mafia:'마피아',police:'경찰',doctor:'의사',citizen:'시민'};let stopP,stopR,people={};
+$('loginBtn').onclick=async()=>{try{await signInWithEmailAndPassword(auth,$('email').value,$('password').value)}catch(e){$('loginMsg').textContent='로그인 실패: '+e.message}};
+onAuthStateChanged(auth,async u=>{if(!u){$('console').classList.add('hide');$('login').classList.remove('hide');return}const t=await u.getIdTokenResult(true);if(t.claims.admin!==true){$('loginMsg').textContent='관리자 권한이 없는 계정입니다.';await signOut(auth);return}$('login').classList.add('hide');$('console').classList.remove('hide');listen()});
+function esc(v){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function listen(){stopP?.();stopR?.();stopP=onValue(ref(db,'rooms/main/presence'),s=>{people=s.val()||{};const ps=Object.entries(people).filter(([,p])=>p.online);$('count').textContent=ps.length+' / 9';$('players').innerHTML=ps.map(([id,p],i)=>'<div class="person"><span>'+ (i+1)+'. '+esc(p.nickname||'이름 없음')+'</span><span class="muted">접속 중</span></div>').join('')||'<p class="muted">접속자가 없습니다.</p>';});stopR=onValue(ref(db,'rooms/main/roles'),s=>{const roles=s.val()||{};$('assigned').innerHTML=Object.entries(roles).map(([id,r])=>'<div class="person"><span>'+esc(people[id]?.nickname||id.slice(0,8))+'</span><b>'+esc(names[r]||'?')+'</b></div>').join('')||'<p class="muted">아직 배정 결과가 없습니다.</p>'})}
+$('assign').onclick=async()=>{if(!confirm('현재 접속 중인 9명에게 역할을 배분할까요?'))return;try{const r=await httpsCallable(fn,'assignRoles')({roomId:'main'});$('result').textContent=r.data.message}catch(e){$('result').textContent='배분 실패: '+e.message}};
+$('reset').onclick=async()=>{if(!confirm('모든 역할을 초기화할까요?'))return;try{const r=await httpsCallable(fn,'resetRoles')({roomId:'main'});$('result').textContent=r.data.message}catch(e){$('result').textContent='초기화 실패: '+e.message}};
+$('logout').onclick=()=>signOut(auth);
+const url=new URL('mafia.html',location.href).href;$('joinUrl').textContent=url;new QRCode($('qr'),{text:url,width:220,height:220});
+</script></body></html>
