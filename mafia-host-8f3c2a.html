@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#101827"><title>마피아 진행자</title>
+<style>
+*{box-sizing:border-box}body{margin:0;padding:18px 15px 40px;background:#0b1220;color:#f8fafc;font-family:system-ui,'Noto Sans KR',sans-serif}.wrap{max-width:620px;margin:auto}.muted{color:#9ca3af}.small{font-size:13px}.top{display:flex;justify-content:space-between;align-items:center;margin:8px 0 22px}.pill{border:1px solid #475569;border-radius:99px;padding:6px 10px;font-size:12px}.panel{padding:20px;border-radius:20px;margin:13px 0;background:#131e30;border:1px solid #29364a}h1{font-size:29px;margin:0 0 8px}h2{font-size:19px;margin:0 0 14px}input,button{font:inherit;border-radius:12px;padding:13px}input{background:#0b1220;color:white;border:1px solid #475569;min-width:0;width:100%;margin:5px 0 10px}button{border:0;background:#dc2626;color:white;font-weight:700;cursor:pointer}button.secondary{background:#263449;color:#e5e7eb}button:disabled{opacity:.45;cursor:not-allowed}.row{display:flex;gap:9px}.row>*{flex:1;min-width:0}.hide{display:none!important}.count{font-size:34px;font-weight:900}.person{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid #29364a}.person:last-child{border:0}.tag{font-size:12px;border-radius:99px;padding:4px 9px;background:#263449;color:#cbd5e1}.actions{display:grid;grid-template-columns:1fr 1fr;gap:9px}.notice{padding:12px;border-radius:12px;background:#332b17;color:#fde68a;font-size:13px;line-height:1.6}.roleline{padding:9px 0;border-bottom:1px solid #29364a}.footer{text-align:center;color:#64748b;font-size:12px;margin:24px 0}a{color:#93c5fd}
+</style></head><body><main class="wrap">
+<header class="top"><div><div class="small muted">WORKSHOP GAME / PRIVATE</div><b>MAFIA HOST CONSOLE</b></div><span class="pill" id="conn">로그인 필요</span></header>
+<section class="panel" id="loginPanel"><h1>진행자 로그인</h1><p class="muted small">Firebase Authentication에 등록한 진행자 이메일과 비밀번호를 입력하세요.</p><label class="small">이메일</label><input id="email" type="email" autocomplete="username" placeholder="진행자 이메일"><label class="small">비밀번호</label><input id="password" type="password" autocomplete="current-password" placeholder="비밀번호"><button id="loginBtn" style="width:100%">로그인</button><p id="loginMsg" class="small"></p></section>
+<div id="console" class="hide">
+<section class="panel"><div class="row"><div><div class="muted small">현재 접속 플레이어</div><div class="count" id="count">0 / 9</div></div><div style="text-align:right"><div class="muted small">게임 상태</div><b id="status">대기 중</b></div></div><p id="hint" class="notice">플레이어 9명이 모두 접속하면 역할을 배분할 수 있습니다. 진행자는 9명에 포함되지 않습니다.</p><div id="players"></div></section>
+<section class="panel"><h2>역할 배분</h2><p class="muted small">마피아 2명 · 경찰 1명 · 의사 1명 · 시민 5명. 접속 중인 플레이어 9명에게만 무작위 배정합니다.</p><div class="actions"><button id="assignBtn" disabled>역할 무작위 배분</button><button id="resetBtn" class="secondary">게임 초기화</button></div><p id="actionMsg" class="small"></p><div id="assigned" class="small"></div></section>
+<section class="panel"><h2>참가 QR 코드</h2><p class="muted small">아래 주소를 참가자에게 공유하세요.</p><p><a id="joinUrl" href="mafia.html">mafia.html</a></p><div id="qr" style="background:white;width:220px;height:220px;padding:10px;border-radius:12px;margin:12px auto;display:grid;place-items:center"></div><button id="copyBtn" class="secondary" style="width:100%">참가 주소 복사</button></section>
+<div class="row"><button id="logoutBtn" class="secondary">로그아웃</button><a href="index.html" style="align-self:center;text-align:center">홈으로</a></div></div>
+<div class="footer">진행자 전용 화면 · URL 비공개는 보안의 대체 수단이 아닙니다.</div></main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script type="module">
+import{initializeApp}from'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
+import{getAuth,onAuthStateChanged,signInWithEmailAndPassword,signOut}from'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
+import{getDatabase,ref,onValue,set,remove,serverTimestamp}from'https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js';
+import{firebaseConfig}from'./firebase-config.js';
+const ADMIN_UID='0Z4gmWcMJ3VqrzheeQniDADL5q62';
+const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getDatabase(app),$=id=>document.getElementById(id);
+const room=ref(db,'rooms/main'),presence=ref(db,'rooms/main/presence'),roles=ref(db,'rooms/main/roles'),game=ref(db,'rooms/main/game');
+const roleNames={mafia:'마피아',police:'경찰',doctor:'의사',citizen:'시민'};
+let people={},currentUser=null,unsub=null;
+function msg(id,s){$(id).textContent=s}
+$('loginBtn').onclick=async()=>{msg('loginMsg','로그인 중…');try{await signInWithEmailAndPassword(auth,$('email').value.trim(),$('password').value)}catch(e){msg('loginMsg','로그인 실패: '+e.message)}};
+onAuthStateChanged(auth,u=>{currentUser=u;if(!u){$('loginPanel').classList.remove('hide');$('console').classList.add('hide');$('conn').textContent='로그인 필요';return}
+if(u.uid!==ADMIN_UID){$('loginPanel').classList.remove('hide');$('console').classList.add('hide');$('conn').textContent='권한 없음';msg('loginMsg','이 계정은 등록된 진행자 UID와 일치하지 않습니다.');signOut(auth);return}
+$('loginPanel').classList.add('hide');$('console').classList.remove('hide');$('conn').textContent='진행자 인증됨';startListeners();});
+function startListeners(){if(unsub)unsub();unsub=onValue(presence,s=>{const all=s.val()||{};people=Object.entries(all).filter(([uid,p])=>p&&p.online===true).map(([uid,p])=>({uid,nickname:String(p.nickname||'이름 없음')}));render()});onValue(game,s=>{const g=s.val()||{};$('status').textContent=g.status==='assigned'?'역할 배분 완료':'대기 중';$('hint').textContent=g.status==='assigned'?'역할이 배정되었습니다. 참가자는 본인 역할만 확인할 수 있습니다.':'플레이어 9명이 모두 접속하면 역할을 배분할 수 있습니다. 진행자는 9명에 포함되지 않습니다.';});}
+function render(){$('count').textContent=people.length+' / 9';$('players').innerHTML=people.map((p,i)=>'<div class="person"><span>'+String(i+1)+'. '+escapeHtml(p.nickname)+'</span><span class="tag">접속 중</span></div>').join('')||'<p class="muted small">아직 참가자가 없습니다.</p>';$('assignBtn').disabled=people.length!==9; }
+function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const b=new Uint32Array(1);crypto.getRandomValues(b);const j=Math.floor(b[0]/4294967296*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+$('assignBtn').onclick=async()=>{if(people.length!==9){msg('actionMsg','접속 플레이어가 정확히 9명이어야 합니다.');return}const uids=people.map(p=>p.uid);if(new Set(uids).size!==9){msg('actionMsg','중복 참가자가 확인되어 배분을 중단했습니다.');return}const deck=shuffle(['mafia','mafia','police','doctor','citizen','citizen','citizen','citizen','citizen']);const data={};uids.forEach((uid,i)=>data[uid]=deck[i]);try{await set(roles,data);await set(game,{status:'assigned',assignedAt:serverTimestamp(),playerCount:9});msg('actionMsg','역할 배분 완료! 참가자 화면에서 각자 확인할 수 있습니다.');$('assigned').innerHTML='<h3>전체 배정 결과 (진행자 전용)</h3>'+people.map((p,i)=>'<div class="roleline">'+escapeHtml(p.nickname)+' — <b>'+roleNames[deck[i]]+'</b></div>').join('')}catch(e){msg('actionMsg','배분 실패: '+e.message)}};
+$('resetBtn').onclick=async()=>{if(!confirm('모든 역할을 삭제하고 대기 상태로 되돌릴까요?'))return;try{await remove(roles);await set(game,{status:'waiting',resetAt:serverTimestamp()});$('assigned').innerHTML='';msg('actionMsg','게임을 초기화했습니다.')}catch(e){msg('actionMsg','초기화 실패: '+e.message)}};
+$('logoutBtn').onclick=()=>signOut(auth);
+const url=new URL('mafia.html',location.href).href;$('joinUrl').href=url;$('joinUrl').textContent=url;$('copyBtn').onclick=()=>navigator.clipboard.writeText(url).then(()=>msg('actionMsg','참가 주소를 복사했습니다.')).catch(()=>msg('actionMsg','주소를 직접 복사해 주세요.'));
+if(window.QRCode)new QRCode($('qr'),{text:url,width:200,height:200});
+</script></body></html>
