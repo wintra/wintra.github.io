@@ -7,6 +7,7 @@
 <section class="panel" id="loginPanel"><h1>진행자 로그인</h1><p class="muted small">Firebase Authentication에 등록한 진행자 이메일과 비밀번호를 입력하세요.</p><label class="small">이메일</label><input id="email" type="email" autocomplete="username" placeholder="진행자 이메일"><label class="small">비밀번호</label><input id="password" type="password" autocomplete="current-password" placeholder="비밀번호"><button id="loginBtn" style="width:100%">로그인</button><p id="loginMsg" class="small"></p></section>
 <div id="console" class="hide">
 <section class="panel"><div class="row"><div><div class="muted small">현재 접속 플레이어</div><div class="count" id="count">0 / 9</div></div><div style="text-align:right"><div class="muted small">게임 상태</div><b id="status">대기 중</b></div></div><p id="hint" class="notice">플레이어 9명이 모두 접속하면 역할을 배분할 수 있습니다. 진행자는 9명에 포함되지 않습니다.</p><div id="players"></div></section>
+<section class="panel"><h2>진행자 전용 테스트 모드</h2><p class="notice">실제 Firebase 참가자·역할 데이터에는 접근하거나 저장하지 않는 로컬 미리보기입니다. 가상 참가자 9명으로 역할 배분 결과를 확인할 수 있습니다.</p><button id="testAssignBtn" style="width:100%">가상 참가자 9명 역할 배분</button><p id="testMsg" class="small muted">아직 테스트를 실행하지 않았습니다.</p><div id="testCounts" class="small"></div><div id="testAssigned" class="small"></div><button id="testResetBtn" class="secondary" style="width:100%;margin-top:10px">테스트 결과 지우기</button></section>
 <section class="panel"><h2>역할 배분</h2><p class="muted small">마피아 2명 · 경찰 1명 · 의사 1명 · 시민 5명. 접속 중인 플레이어 9명에게만 무작위 배정합니다.</p><div class="actions"><button id="assignBtn" disabled>역할 무작위 배분</button><button id="resetBtn" class="secondary">게임 초기화</button></div><p id="actionMsg" class="small"></p><div id="assigned" class="small"></div></section>
 
 <section class="panel"><h2>직업별 룰북</h2><p class="muted small">진행 중에도 각 직업의 규칙과 전체 진행 순서를 확인할 수 있습니다.</p><div class="tabs" id="hostTabs"><button class="active" data-role="mafia">마피아</button><button data-role="police">경찰</button><button data-role="doctor">의사</button><button data-role="citizen">시민</button></div><div id="hostRuleContent"></div>
@@ -52,6 +53,17 @@ function startListeners(){if(unsub)unsub();unsub=onValue(presence,s=>{const all=
 function render(){$('count').textContent=people.length+' / 9';$('players').innerHTML=people.map((p,i)=>'<div class="person"><span>'+String(i+1)+'. '+escapeHtml(p.nickname)+'</span><span class="tag">접속 중</span></div>').join('')||'<p class="muted small">아직 참가자가 없습니다.</p>';$('assignBtn').disabled=people.length!==9; }
 function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function shuffle(a){for(let i=a.length-1;i>0;i--){const b=new Uint32Array(1);crypto.getRandomValues(b);const j=Math.floor(b[0]/4294967296*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+
+const testNames=['테스트 참가자 01','테스트 참가자 02','테스트 참가자 03','테스트 참가자 04','테스트 참가자 05','테스트 참가자 06','테스트 참가자 07','테스트 참가자 08','테스트 참가자 09'];
+$('testAssignBtn').onclick=()=>{
+ const deck=shuffle(['mafia','mafia','police','doctor','citizen','citizen','citizen','citizen','citizen']);
+ const counts={mafia:0,police:0,doctor:0,citizen:0};deck.forEach(k=>counts[k]++);
+ $('testMsg').textContent='테스트 배분 완료 · 실제 게임 데이터 변경 없음';
+ $('testCounts').innerHTML='<h3>역할별 인원 검증</h3>'+Object.keys(counts).map(k=>'<div class="roleline">'+roleNames[k]+' : <b>'+counts[k]+'명</b></div>').join('');
+ $('testAssigned').innerHTML='<h3>가상 참가자 배정 결과</h3>'+testNames.map((n,i)=>'<div class="roleline">'+n+' — <b>'+roleNames[deck[i]]+'</b></div>').join('');
+};
+$('testResetBtn').onclick=()=>{$('testMsg').textContent='테스트 결과를 지웠습니다.';$('testCounts').innerHTML='';$('testAssigned').innerHTML='';};
+
 $('assignBtn').onclick=async()=>{if(people.length!==9){msg('actionMsg','접속 플레이어가 정확히 9명이어야 합니다.');return}const uids=people.map(p=>p.uid);if(new Set(uids).size!==9){msg('actionMsg','중복 참가자가 확인되어 배분을 중단했습니다.');return}const deck=shuffle(['mafia','mafia','police','doctor','citizen','citizen','citizen','citizen','citizen']);const data={};uids.forEach((uid,i)=>data[uid]=deck[i]);try{await set(roles,data);await set(game,{status:'assigned',assignedAt:serverTimestamp(),playerCount:9});msg('actionMsg','역할 배분 완료! 참가자 화면에서 각자 확인할 수 있습니다.');$('assigned').innerHTML='<h3>전체 배정 결과 (진행자 전용)</h3>'+people.map((p,i)=>'<div class="roleline">'+escapeHtml(p.nickname)+' — <b>'+roleNames[deck[i]]+'</b></div>').join('')}catch(e){msg('actionMsg','배분 실패: '+e.message)}};
 $('resetBtn').onclick=async()=>{if(!confirm('모든 역할을 삭제하고 대기 상태로 되돌릴까요?'))return;try{await remove(roles);await set(game,{status:'waiting',resetAt:serverTimestamp()});$('assigned').innerHTML='';msg('actionMsg','게임을 초기화했습니다.')}catch(e){msg('actionMsg','초기화 실패: '+e.message)}};
 $('logoutBtn').onclick=()=>signOut(auth);
