@@ -1,24 +1,26 @@
 {
   "rules": {
+    ".read": false,
+    ".write": false,
     "rooms": {
-      "$room": {
+      "main": {
         "presence": {
           ".read": "auth != null",
           "$uid": {
             ".write": "auth != null && auth.uid === $uid",
-            ".validate": "newData.hasChildren(['nickname','online','joinedAt']) && newData.child('nickname').isString() && newData.child('nickname').val().length <= 12 && newData.child('online').isBoolean() && newData.child('joinedAt').isNumber()"
+            ".validate": "newData.hasChildren(['nickname','online','joinedAt']) && newData.child('nickname').isString() && newData.child('nickname').val().length > 0 && newData.child('nickname').val().length <= 12 && newData.child('online').isBoolean() && newData.child('joinedAt').isNumber()"
           }
         },
         "roles": {
-          ".read": "auth != null && auth.token.admin === true",
+          ".read": "auth != null && auth.uid === '0Z4gmWcMJ3VqrzheeQniDADL5q62'",
+          ".write": "auth != null && auth.uid === '0Z4gmWcMJ3VqrzheeQniDADL5q62'",
           "$uid": {
-            ".read": "auth != null && (auth.uid === $uid || auth.token.admin === true)",
-            ".write": false
+            ".read": "auth != null && (auth.uid === $uid || auth.uid === '0Z4gmWcMJ3VqrzheeQniDADL5q62')"
           }
         },
         "game": {
           ".read": "auth != null",
-          ".write": false
+          ".write": "auth != null && auth.uid === '0Z4gmWcMJ3VqrzheeQniDADL5q62'"
         }
       }
     }
