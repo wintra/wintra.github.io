@@ -7,7 +7,7 @@
 <section class="panel" id="loginPanel"><h1>진행자 로그인</h1><p class="muted small">Firebase Authentication에 등록한 진행자 이메일과 비밀번호를 입력하세요.</p><label class="small">이메일</label><input id="email" type="email" autocomplete="username" placeholder="진행자 이메일"><label class="small">비밀번호</label><input id="password" type="password" autocomplete="current-password" placeholder="비밀번호"><button id="loginBtn" style="width:100%">로그인</button><p id="loginMsg" class="small"></p></section>
 <div id="console" class="hide">
 <section class="panel"><div class="row"><div><div class="muted small">현재 접속 플레이어</div><div class="count" id="count">0 / 9</div></div><div style="text-align:right"><div class="muted small">게임 상태</div><b id="status">대기 중</b></div></div><p id="hint" class="notice">플레이어 9명이 모두 접속하면 역할을 배분할 수 있습니다. 진행자는 9명에 포함되지 않습니다.</p><div id="players"></div></section>
-<section class="panel"><h2>진행자 전용 테스트 모드</h2><p class="notice">실제 Firebase 참가자·역할 데이터에는 접근하거나 저장하지 않는 로컬 미리보기입니다. 가상 참가자 9명으로 역할 배분 결과를 확인할 수 있습니다.</p><button id="testAssignBtn" style="width:100%">가상 참가자 9명 역할 배분</button><p id="testMsg" class="small muted">아직 테스트를 실행하지 않았습니다.</p><div id="testCounts" class="small"></div><div id="testAssigned" class="small"></div><button id="testResetBtn" class="secondary" style="width:100%;margin-top:10px">테스트 결과 지우기</button></section>
+<section class="panel"><h2>진행자 전용 테스트 모드</h2><p class="notice">현재 접속 중인 실제 참가자를 우선 포함하고, 부족한 인원은 가상 참가자로 채워 총 9명에게 역할을 배분합니다. 테스트 결과는 로컬 미리보기이며 Firebase의 실제 역할 데이터에는 저장하지 않습니다.</p><button id="testAssignBtn" style="width:100%">실제 참가자 + 가상 참가자 역할 배분</button><p id="testMsg" class="small muted">아직 테스트를 실행하지 않았습니다.</p><div id="testCounts" class="small"></div><div id="testAssigned" class="small"></div><button id="testResetBtn" class="secondary" style="width:100%;margin-top:10px">테스트 결과 지우기</button></section>
 <section class="panel"><h2>역할 배분</h2><p class="muted small">마피아 2명 · 경찰 1명 · 의사 1명 · 시민 5명. 접속 중인 플레이어 9명에게만 무작위 배정합니다.</p><div class="actions"><button id="assignBtn" disabled>역할 무작위 배분</button><button id="resetBtn" class="secondary">게임 초기화</button></div><p id="actionMsg" class="small"></p><div id="assigned" class="small"></div></section>
 
 <section class="panel"><h2>직업별 룰북</h2><p class="muted small">진행 중에도 각 직업의 규칙과 전체 진행 순서를 확인할 수 있습니다.</p><div class="tabs" id="hostTabs"><button class="active" data-role="mafia">마피아</button><button data-role="police">경찰</button><button data-role="doctor">의사</button><button data-role="citizen">시민</button></div><div id="hostRuleContent"></div>
@@ -54,13 +54,17 @@ function render(){$('count').textContent=people.length+' / 9';$('players').inner
 function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function shuffle(a){for(let i=a.length-1;i>0;i--){const b=new Uint32Array(1);crypto.getRandomValues(b);const j=Math.floor(b[0]/4294967296*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
 
-const testNames=['테스트 참가자 01','테스트 참가자 02','테스트 참가자 03','테스트 참가자 04','테스트 참가자 05','테스트 참가자 06','테스트 참가자 07','테스트 참가자 08','테스트 참가자 09'];
 $('testAssignBtn').onclick=()=>{
+ const actual=people.slice(0,9).map(p=>({nickname:p.nickname,kind:'실제 참가자'}));
+ const virtualCount=Math.max(0,9-actual.length);
+ const virtual=Array.from({length:virtualCount},(_,i)=>({nickname:'테스트 참가자 '+String(i+1).padStart(2,'0'),kind:'가상 참가자'}));
+ const participants=[...actual,...virtual];
  const deck=shuffle(['mafia','mafia','police','doctor','citizen','citizen','citizen','citizen','citizen']);
  const counts={mafia:0,police:0,doctor:0,citizen:0};deck.forEach(k=>counts[k]++);
- $('testMsg').textContent='테스트 배분 완료 · 실제 게임 데이터 변경 없음';
+ const overflow=people.length>9?' 실제 참가자가 9명을 초과하여 목록 앞 9명만 테스트에 포함했습니다.':'';
+ $('testMsg').textContent='테스트 배분 완료 · 실제 참가자 '+actual.length+'명 + 가상 참가자 '+virtualCount+'명 · Firebase 데이터 변경 없음.'+overflow;
  $('testCounts').innerHTML='<h3>역할별 인원 검증</h3>'+Object.keys(counts).map(k=>'<div class="roleline">'+roleNames[k]+' : <b>'+counts[k]+'명</b></div>').join('');
- $('testAssigned').innerHTML='<h3>가상 참가자 배정 결과</h3>'+testNames.map((n,i)=>'<div class="roleline">'+n+' — <b>'+roleNames[deck[i]]+'</b></div>').join('');
+ $('testAssigned').innerHTML='<h3>참가자 배정 결과</h3>'+participants.map((p,i)=>'<div class="roleline"><span class="tag">'+p.kind+'</span> '+escapeHtml(p.nickname)+' — <b>'+roleNames[deck[i]]+'</b></div>').join('');
 };
 $('testResetBtn').onclick=()=>{$('testMsg').textContent='테스트 결과를 지웠습니다.';$('testCounts').innerHTML='';$('testAssigned').innerHTML='';};
 
