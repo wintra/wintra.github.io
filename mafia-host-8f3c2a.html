@@ -54,17 +54,26 @@ function render(){$('count').textContent=people.length+' / 9';$('players').inner
 function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function shuffle(a){for(let i=a.length-1;i>0;i--){const b=new Uint32Array(1);crypto.getRandomValues(b);const j=Math.floor(b[0]/4294967296*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
 
-$('testAssignBtn').onclick=()=>{
- const actual=people.slice(0,9).map(p=>({nickname:p.nickname,kind:'실제 참가자'}));
+$('testAssignBtn').onclick=async()=>{
+ const actual=people.slice(0,9).map(p=>({uid:p.uid,nickname:p.nickname,kind:'실제 참가자'}));
  const virtualCount=Math.max(0,9-actual.length);
  const virtual=Array.from({length:virtualCount},(_,i)=>({nickname:'테스트 참가자 '+String(i+1).padStart(2,'0'),kind:'가상 참가자'}));
  const participants=[...actual,...virtual];
  const deck=shuffle(['mafia','mafia','police','doctor','citizen','citizen','citizen','citizen','citizen']);
  const counts={mafia:0,police:0,doctor:0,citizen:0};deck.forEach(k=>counts[k]++);
+ const roleData={};actual.forEach((p,i)=>roleData[p.uid]=deck[i]);
  const overflow=people.length>9?' 실제 참가자가 9명을 초과하여 목록 앞 9명만 테스트에 포함했습니다.':'';
- $('testMsg').textContent='테스트 배분 완료 · 실제 참가자 '+actual.length+'명 + 가상 참가자 '+virtualCount+'명 · Firebase 데이터 변경 없음.'+overflow;
- $('testCounts').innerHTML='<h3>역할별 인원 검증</h3>'+Object.keys(counts).map(k=>'<div class="roleline">'+roleNames[k]+' : <b>'+counts[k]+'명</b></div>').join('');
- $('testAssigned').innerHTML='<h3>참가자 배정 결과</h3>'+participants.map((p,i)=>'<div class="roleline"><span class="tag">'+p.kind+'</span> '+escapeHtml(p.nickname)+' — <b>'+roleNames[deck[i]]+'</b></div>').join('');
+ $('testAssignBtn').disabled=true;
+ $('testMsg').textContent='실제 참가자 역할 저장 중…';
+ try{
+  await set(roles,roleData);
+  await set(game,{status:'assigned',assignedAt:serverTimestamp(),playerCount:actual.length,testMode:true,virtualPlayerCount:virtualCount});
+  $('testMsg').textContent='테스트 배분 완료 · 실제 참가자 '+actual.length+'명은 각자 참가자 화면에서 역할 확인 가능 · 가상 참가자 '+virtualCount+'명은 진행자 화면 전용.'+overflow;
+  $('testCounts').innerHTML='<h3>역할별 인원 검증 (전체 9명 기준)</h3>'+Object.keys(counts).map(k=>'<div class="roleline">'+roleNames[k]+' : <b>'+counts[k]+'명</b></div>').join('');
+  $('testAssigned').innerHTML='<h3>참가자 배정 결과</h3>'+participants.map((p,i)=>'<div class="roleline"><span class="tag">'+p.kind+'</span> '+escapeHtml(p.nickname)+' — <b>'+roleNames[deck[i]]+'</b></div>').join('');
+ }catch(e){
+  $('testMsg').textContent='테스트 배분 실패: '+e.message;
+ }finally{$('testAssignBtn').disabled=false}
 };
 $('testResetBtn').onclick=()=>{$('testMsg').textContent='테스트 결과를 지웠습니다.';$('testCounts').innerHTML='';$('testAssigned').innerHTML='';};
 
