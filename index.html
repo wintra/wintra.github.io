@@ -1,5 +1,7 @@
 <!doctype html>
-<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;padding-block:env(safe-area-inset-top,0px) env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}img{max-width:100%}</style>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;padding-block:env(safe-area-inset-top,0px) env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}img{max-width:100%}
+.theme-switch{display:inline-flex;gap:4px;padding:4px;margin-top:16px;border:1px solid var(--line);border-radius:999px;background:var(--surface)}.theme-switch button{min-height:34px;padding:0 14px;border:0;border-radius:999px;background:transparent;color:var(--muted);font:700 13px var(--font-b);cursor:pointer}.theme-switch button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+</style>
 <title>강릉 워크샵 게임</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -163,7 +165,7 @@ details.rules h4{margin:14px 0 4px;font-size:15px;color:var(--tc)}
   <div class="home-head">
     <div class="eyebrow">Gangneung Workshop</div>
     <h1 class="disp">워크샵 게임</h1>
-    <p>마피아 룰북은 QR로, 제시어 카드는 각자 폰으로, 텔레파시는 사회자 폰 한 대로 진행해요.</p>
+    <p>마피아 룰북은 QR로, 제시어 카드는 각자 폰으로, 텔레파시는 사회자 폰 한 대로 진행해요.</p><div class="theme-switch" role="group" aria-label="화면 테마"><button type="button" data-theme-choice="light">라이트</button><button type="button" data-theme-choice="dark">다크</button></div>
   </div>
   <div class="tiles">
     <a class="tile" href="mafia.html" style="--tc:var(--mafia)">
@@ -625,6 +627,20 @@ $('#qrCopy').addEventListener('click', function(){
   };
   try { navigator.clipboard.writeText(u).then(function(){ toast('주소를 복사했어요'); }, fallback); } catch (e) { fallback(); }
 });
+
+/* ---------- 테마 ---------- */
+var savedTheme = localStorage.getItem('workshop-theme');
+function applyTheme(theme){
+  document.documentElement.setAttribute('data-theme',theme);
+  localStorage.setItem('workshop-theme',theme);
+  document.querySelectorAll('[data-theme-choice]').forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset.themeChoice===theme));});
+}
+if(savedTheme==='light'||savedTheme==='dark') applyTheme(savedTheme);
+else {
+  var preferred=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';
+  document.querySelectorAll('[data-theme-choice]').forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset.themeChoice===preferred));});
+}
+document.querySelectorAll('[data-theme-choice]').forEach(function(b){b.addEventListener('click',function(){applyTheme(b.dataset.themeChoice);});});
 
 /* ---------- 시작 ---------- */
 $('#kwTotal').textContent = allItems.length;
