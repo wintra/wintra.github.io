@@ -2,8 +2,44 @@
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#101827"><title>마피아 진행자</title>
 <style>
 *{box-sizing:border-box}body{margin:0;padding:18px 15px 40px;background:#0b1220;color:#f8fafc;font-family:system-ui,'Noto Sans KR',sans-serif}.wrap{max-width:620px;margin:auto}.muted{color:#9ca3af}.small{font-size:13px}.top{display:flex;justify-content:space-between;align-items:center;margin:8px 0 22px}.pill{border:1px solid #475569;border-radius:99px;padding:6px 10px;font-size:12px}.panel{padding:20px;border-radius:20px;margin:13px 0;background:#131e30;border:1px solid #29364a}h1{font-size:29px;margin:0 0 8px}h2{font-size:19px;margin:0 0 14px}input,button{font:inherit;border-radius:12px;padding:13px}input{background:#0b1220;color:white;border:1px solid #475569;min-width:0;width:100%;margin:5px 0 10px}button{border:0;background:#dc2626;color:white;font-weight:700;cursor:pointer}button.secondary{background:#263449;color:#e5e7eb}button:disabled{opacity:.45;cursor:not-allowed}.row{display:flex;gap:9px}.row>*{flex:1;min-width:0}.hide{display:none!important}.count{font-size:34px;font-weight:900}.person{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid #29364a}.person:last-child{border:0}.tag{font-size:12px;border-radius:99px;padding:4px 9px;background:#263449;color:#cbd5e1}.actions{display:grid;grid-template-columns:1fr 1fr;gap:9px}.notice{padding:12px;border-radius:12px;background:#332b17;color:#fde68a;font-size:13px;line-height:1.6}.roleline{padding:9px 0;border-bottom:1px solid #29364a}.footer{text-align:center;color:#64748b;font-size:12px;margin:24px 0}a{color:#93c5fd}
+
+:root{--bg:#e9eff4;--surface:#fff;--fg:#0f1f2c;--muted:#566878;--line:#cfdae3;--soft:#dbe5ec;--mafia:#c92a2a;--accent:#c92a2a;color-scheme:light}
+:root[data-theme="dark"]{--bg:#09151f;--surface:#102130;--fg:#e7eef4;--muted:#8fa3b3;--line:#223a4d;--soft:#16293a;--mafia:#ff6b6b;--accent:#ff6b6b;color-scheme:dark}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--fg);font-family:'Noto Sans KR',system-ui,sans-serif;line-height:1.6;padding:0 16px 36px}
+.wrap{max-width:520px;margin:0 auto}
+.top{position:sticky;top:0;z-index:5;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 0 16px;margin:0 0 14px;background:var(--bg)}
+.hero,.panel{background:var(--surface);border:1.5px solid var(--line);border-radius:20px;padding:20px;margin:14px 0;box-shadow:0 3px 14px rgba(15,31,44,.04)}
+.hero{background:linear-gradient(145deg,#c92a2a,#761f2a);color:#fff;border:0}
+.hero p{color:#ffe1e1}
+h1{font-size:34px;line-height:1.15;letter-spacing:-.04em}
+h2{font-size:21px;letter-spacing:-.02em}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+input,button{font:inherit;border-radius:12px}
+input{background:var(--bg);color:var(--fg);border:1.5px solid var(--line);padding:13px;min-width:0;width:100%}
+button{border:0;background:var(--mafia);color:#fff;font-weight:700;padding:13px;cursor:pointer;transition:transform .12s,filter .12s}
+button:active{transform:translateY(1px)}
+button.secondary{background:var(--soft);color:var(--fg);border:1.5px solid var(--line)}
+.pill{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:99px;padding:6px 10px;font-size:12px}
+.count{font-size:34px;color:var(--mafia)}
+.role{font-size:40px;letter-spacing:-.04em}
+.mafia{color:#d92d35}.town{color:#1971c2}
+.tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;overflow:visible;margin:16px 0}
+.tabs button{min-height:48px;padding:8px 5px;background:var(--soft);color:var(--fg);border:1.5px solid var(--line);font-size:14px}
+.tabs button.active{background:var(--mafia);border-color:var(--mafia);color:#fff}
+.rule{border:1px solid var(--line);border-radius:14px;padding:14px;margin:9px 0;background:var(--bg);color:var(--fg);line-height:1.7}
+.rule h3{color:var(--mafia);margin:0 0 8px;font-size:19px}
+#ruleContent .rule:first-child{background:color-mix(in srgb,var(--mafia) 8%,var(--surface));border-color:color-mix(in srgb,var(--mafia) 40%,var(--line))}
+#ruleContent ul{list-style:none;padding:0;margin:10px 0}
+#ruleContent li.rule{position:relative;padding:13px 14px 13px 42px;font-size:15px}
+#ruleContent li.rule:before{content:"✓";position:absolute;left:15px;top:12px;color:var(--mafia);font-weight:900;font-size:17px}
+.theme-switch{display:inline-flex;gap:4px;padding:4px;border:1px solid var(--line);border-radius:999px;background:var(--surface)}
+.theme-switch button{min-height:32px;padding:0 12px;border:0;border-radius:999px;background:transparent;color:var(--muted);font-size:12px}
+.theme-switch button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.footer{color:var(--muted)}
 </style></head><body><main class="wrap">
-<header class="top"><div><div class="small muted">WORKSHOP GAME / PRIVATE</div><b>MAFIA HOST CONSOLE</b></div><span class="pill" id="conn">로그인 필요</span></header>
+<header class="top"><div><div class="small muted">WORKSHOP GAME / PRIVATE</div><b>MAFIA HOST CONSOLE</b></div><span class="pill" id="conn">로그인 필요</span><div class="theme-switch" role="group" aria-label="화면 테마"><button type="button" data-theme-choice="light">라이트</button><button type="button" data-theme-choice="dark">다크</button></div></header>
 <section class="panel" id="loginPanel"><h1>진행자 로그인</h1><p class="muted small">Firebase Authentication에 등록한 진행자 이메일과 비밀번호를 입력하세요.</p><label class="small">이메일</label><input id="email" type="email" autocomplete="username" placeholder="진행자 이메일"><label class="small">비밀번호</label><input id="password" type="password" autocomplete="current-password" placeholder="비밀번호"><button id="loginBtn" style="width:100%">로그인</button><p id="loginMsg" class="small"></p></section>
 <div id="console" class="hide">
 <section class="panel"><div class="row"><div><div class="muted small">현재 접속 플레이어</div><div class="count" id="count">0 / 9</div></div><div style="text-align:right"><div class="muted small">게임 상태</div><b id="status">대기 중</b></div></div><p id="hint" class="notice">플레이어 9명이 모두 접속하면 역할을 배분할 수 있습니다. 진행자는 9명에 포함되지 않습니다.</p><div id="players"></div></section>
@@ -46,6 +82,11 @@ const roleNames={mafia:'마피아',police:'경찰',doctor:'의사',citizen:'시�
 let people={},currentUser=null,unsub=null;
 function msg(id,s){$(id).textContent=s}
 $('loginBtn').onclick=async()=>{msg('loginMsg','로그인 중…');try{await signInWithEmailAndPassword(auth,$('email').value.trim(),$('password').value)}catch(e){msg('loginMsg','로그인 실패: '+e.message)}};
+const savedTheme=localStorage.getItem('workshop-theme');
+function applyTheme(theme){document.documentElement.setAttribute('data-theme',theme);localStorage.setItem('workshop-theme',theme);document.querySelectorAll('[data-theme-choice]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.themeChoice===theme)))}
+const initialTheme=(savedTheme==='light'||savedTheme==='dark')?savedTheme:(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
+applyTheme(initialTheme);
+document.querySelectorAll('[data-theme-choice]').forEach(b=>b.addEventListener('click',()=>applyTheme(b.dataset.themeChoice)));
 onAuthStateChanged(auth,u=>{currentUser=u;if(!u){$('loginPanel').classList.remove('hide');$('console').classList.add('hide');$('conn').textContent='로그인 필요';return}
 if(u.uid!==ADMIN_UID){$('loginPanel').classList.remove('hide');$('console').classList.add('hide');$('conn').textContent='권한 없음';msg('loginMsg','이 계정은 등록된 진행자 UID와 일치하지 않습니다.');signOut(auth);return}
 $('loginPanel').classList.add('hide');$('console').classList.remove('hide');$('conn').textContent='진행자 인증됨';startListeners();});
