@@ -1,0 +1,26 @@
+{
+  "rules": {
+    "rooms": {
+      "$room": {
+        "presence": {
+          ".read": "auth != null",
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid",
+            ".validate": "newData.hasChildren(['nickname','online','joinedAt']) && newData.child('nickname').isString() && newData.child('nickname').val().length <= 12 && newData.child('online').isBoolean() && newData.child('joinedAt').isNumber()"
+          }
+        },
+        "roles": {
+          ".read": "auth != null && auth.token.admin === true",
+          "$uid": {
+            ".read": "auth != null && (auth.uid === $uid || auth.token.admin === true)",
+            ".write": false
+          }
+        },
+        "game": {
+          ".read": "auth != null",
+          ".write": false
+        }
+      }
+    }
+  }
+}
