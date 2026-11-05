@@ -32,6 +32,7 @@ import{getAuth,onAuthStateChanged,signInWithEmailAndPassword,signOut}from'https:
 import{getDatabase,ref,onValue,set,remove,serverTimestamp}from'https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js';
 import{firebaseConfig}from'./firebase-config.js';
 const ADMIN_UID='0Z4gmWcMJ3VqrzheeQniDADL5q62';
+const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getDatabase(app),$=id=>document.getElementById(id);
 const hostRules={
 mafia:{title:'마피아 2명',desc:'마피아팀 · 밤에 제거할 플레이어를 지목합니다.',items:['첫날 밤 서로의 정체를 확인합니다.','매일 밤 둘이 합의해 제거할 플레이어 한 명을 지목합니다.','낮에는 시민인 척 토론과 투표에 참여합니다.']},
 police:{title:'경찰 1명',desc:'시민팀 · 밤마다 한 명의 마피아 여부를 확인합니다.',items:['매일 밤 한 명을 지목해 마피아인지 확인합니다.','사회자가 마피아 여부를 고개 끄덕임/가로젓기로 알려줍니다.','정체를 공개할 시점은 본인이 판단합니다.']},
@@ -40,7 +41,6 @@ citizen:{title:'시민 5명',desc:'시민팀 · 토론과 투표로 마피아를
 function showHostRule(k){const r=hostRules[k];$('hostRuleContent').innerHTML='<div class="rule"><h3>'+r.title+'</h3>'+r.desc+'</div><ul>'+r.items.map(x=>'<li class="rule">'+x+'</li>').join('')+'</ul>';document.querySelectorAll('#hostTabs button').forEach(b=>b.classList.toggle('active',b.dataset.role===k))}
 $('hostTabs').onclick=e=>{const b=e.target.closest('[data-role]');if(b)showHostRule(b.dataset.role)};showHostRule('mafia');
 
-const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getDatabase(app),$=id=>document.getElementById(id);
 const room=ref(db,'rooms/main'),presence=ref(db,'rooms/main/presence'),roles=ref(db,'rooms/main/roles'),game=ref(db,'rooms/main/game');
 const roleNames={mafia:'마피아',police:'경찰',doctor:'의사',citizen:'시민'};
 let people={},currentUser=null,unsub=null;
