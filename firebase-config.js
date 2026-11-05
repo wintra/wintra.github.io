@@ -1,8 +1,10 @@
-// Firebase Console > Project settings > Your apps > Web app config 값으로 교체하세요.
+// Firebase Console > Project settings > Your apps > workshop-mafia-web
 export const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
-  projectId: "YOUR_PROJECT_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyDpqwTFB8EenOaCufokCQ6JWD6tYIVPE1E",
+  authDomain: "gangneung-workshop.firebaseapp.com",
+  databaseURL: "https://gangneung-workshop-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "gangneung-workshop",
+  storageBucket: "gangneung-workshop.firebasestorage.app",
+  messagingSenderId: "342394085337",
+  appId: "1:342394085337:web:072a15aee7a30313e643c8"
 };
