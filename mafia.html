@@ -38,35 +38,38 @@ button.secondary{background:var(--soft);color:var(--fg);border:1.5px solid var(-
 .theme-switch button{min-height:32px;padding:0 12px;border:0;border-radius:999px;background:transparent;color:var(--muted);font-size:12px}
 .theme-switch button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
 .footer{color:var(--muted)}
+
+.role-reveal-wrap{margin:18px 0 6px;padding:14px;border:1px dashed var(--line);border-radius:16px;background:var(--bg)}
+.reveal-role-btn{width:100%;min-height:52px;font-size:16px;letter-spacing:-.02em}
+.role-secret{padding:12px 4px 2px;text-align:center}
+.role-secret .role{font-size:38px;font-weight:900;margin:4px 0}
+.role-secret p{margin:4px 0 10px}
+.flow-steps{display:flex;flex-direction:column;gap:6px;margin:16px 0}
+.flow-step{display:flex;align-items:flex-start;gap:13px;padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.flow-number{display:grid;place-items:center;flex:0 0 34px;height:34px;border-radius:11px;background:var(--mafia);color:white;font-weight:900;font-size:13px}
+.flow-step b{font-size:17px;color:var(--fg)}
+.flow-step p{margin:3px 0 0;color:var(--muted);font-size:14px;line-height:1.6}
+.flow-arrow{text-align:center;color:var(--mafia);font-size:19px;font-weight:900;line-height:1}
+.flow-repeat{padding:12px;border-radius:12px;background:color-mix(in srgb,var(--mafia) 9%,var(--surface));text-align:center}
+.flow-win{padding:12px 14px;border-radius:12px;background:var(--bg);font-size:13px;line-height:1.9;color:var(--muted)}
+.flow-win b{color:var(--fg)}
 </style></head><body><main class="wrap">
 <header class="top"><div><div class="small muted">WORKSHOP GAME</div><b>MAFIA ROOM</b></div><span class="pill" id="conn">연결 중…</span><div class="theme-switch" role="group" aria-label="화면 테마"><button type="button" data-theme-choice="light">라이트</button><button type="button" data-theme-choice="dark">다크</button></div></header>
 <section class="hero"><h1>마피아 게임</h1><p>닉네임을 정하고 참가하세요. 배정된 역할은 본인에게만 공개됩니다.</p></section>
 <section class="panel" id="joinPanel"><h2>게임 참가</h2><p class="muted small">사회자는 별도 진행자 화면을 사용합니다. 플레이어 9명이 모이면 역할을 배분합니다.</p><div class="row"><input id="nickname" maxlength="12" placeholder="닉네임 (최대 12자)"><button id="joinBtn">참가하기</button></div><p id="joinMsg" class="small"></p></section>
-<section class="panel hide" id="roomPanel"><div class="row"><div><div class="muted small">접속 플레이어</div><div class="count" id="count">0 / 9</div></div><div style="text-align:right"><div class="muted small">내 닉네임</div><b id="myName">-</b></div></div><p id="gameStatus">역할 배분 대기 중</p><div id="roleCard" class="hide"><div class="muted small">나의 역할</div><div id="myRole" class="role"></div><p id="roleDesc" class="muted"></p></div><p id="waitText" class="muted small">진행자가 역할을 배분하면 이곳에 표시됩니다.</p><button class="secondary" id="leaveBtn" style="width:100%">참가 종료</button></section>
+<section class="panel hide" id="roomPanel"><div class="row"><div><div class="muted small">접속 플레이어</div><div class="count" id="count">0 / 9</div></div><div style="text-align:right"><div class="muted small">내 닉네임</div><b id="myName">-</b></div></div><p id="gameStatus">역할 배분 대기 중</p><div id="roleCard" class="hide role-reveal-wrap"><div class="muted small">나의 역할</div><button type="button" id="revealRoleBtn" class="secondary reveal-role-btn">눌러서 내 역할 확인하기</button><div id="roleSecret" class="role-secret hide" aria-live="polite"><div id="myRole" class="role"></div><p id="roleDesc" class="muted"></p><div class="small muted">보안을 위해 5초 후 자동으로 가려집니다.</div></div></div><p id="waitText" class="muted small">진행자가 역할을 배분하면 이곳에 표시됩니다.</p><button class="secondary" id="leaveBtn" style="width:100%">참가 종료</button></section>
 <section class="panel"><h2 style="margin-top:0">직업별 룰북</h2><p class="muted small">역할 배분 전후 언제든 모든 직업의 규칙을 볼 수 있습니다.</p><div class="tabs" id="tabs"><button class="active" data-role="mafia">마피아</button><button data-role="police">경찰</button><button data-role="doctor">의사</button><button data-role="citizen">시민</button></div><div id="ruleContent"></div>
-<div class="rule" style="margin-top:18px">
-<h3>게임 전체 진행 규칙</h3>
-<p><b>준비:</b> 플레이어 9명에게 마피아 2·경찰 1·의사 1·시민 5명을 배정합니다. 진행자는 모든 정체를 알고 공정하게 진행합니다.</p>
-<p><b>승리 조건</b><br>시민팀: 마피아 2명을 모두 처형하면 승리<br>마피아팀: 생존한 마피아 수가 생존한 시민팀 수와 같아지면 승리</p>
-<p><b>한 라운드 흐름:</b> 밤 → 아침(사망 발표) → 토론 → 투표·처형을 승패가 날 때까지 반복합니다.</p>
-<h3>밤 진행 순서</h3>
-<ol>
-<li>사회자: “밤이 되었습니다. 모두 눈을 감아주세요.”</li>
-<li>마피아: 첫날 밤 서로 정체를 확인하고, 매일 밤 둘이 합의해 제거할 1명을 손가락으로 지목합니다. 같은 마피아는 지목할 수 없습니다.</li>
-<li>경찰: 조사할 1명을 지목합니다. 사회자는 마피아면 고개를 끄덕이고 아니면 가로젓습니다.</li>
-<li>의사: 보호할 1명을 지목합니다. 마피아가 지목한 사람과 같으면 생존합니다. 자기 보호는 게임 중 1회만 가능합니다.</li>
-<li>사회자: “아침이 밝았습니다. 모두 눈을 뜨세요.”</li>
-</ol>
-<p><b>사회자 진행 팁:</b> 순서는 마피아 → 경찰 → 의사입니다. 지목은 손가락으로만 하고 말하지 않습니다. 이미 사망한 역할도 같은 순서와 시간으로 호출해 정체가 드러나지 않게 합니다.</p>
-<h3>낮 진행</h3>
-<ol>
-<li><b>사망 발표:</b> 사망자 이름만 발표합니다. 의사가 살렸다면 “아무도 죽지 않았습니다”라고 안내합니다.</li>
-<li><b>자유 토론:</b> 생존자 전원이 3~5분간 발언합니다. 거짓말과 역할 연기는 허용됩니다.</li>
-<li><b>투표:</b> “하나, 둘, 셋!”에 맞춰 동시에 의심되는 사람을 지목합니다. 최다 득표자 1명을 처형합니다.</li>
-</ol>
-<p><b>동점 처리:</b> 동점자만 30초 최후 변론 후 재투표합니다. 다시 동점이면 처형 없이 밤으로 넘어갑니다.</p>
-<h3>꼭 지킬 규칙</h3>
-<ul><li>사망자는 말·표정·눈짓을 하지 않고 조용히 관전합니다.</li><li>처형·사망 시 역할은 공개하지 않습니다.</li><li>역할 쪽지 보여주기, 메모·휴대폰 사용은 금지합니다.</li><li>사회자 판정이 최종입니다.</li></ul>
+<div class="rule overall-flow" style="margin-top:18px">
+<h3>게임 진행 흐름</h3>
+<div class="flow-steps">
+<div class="flow-step"><span class="flow-number">01</span><div><b>밤</b><p>마피아는 제거할 사람을 선택하고, 경찰은 조사하고, 의사는 한 명을 보호합니다.</p></div></div>
+<div class="flow-arrow" aria-hidden="true">↓</div>
+<div class="flow-step"><span class="flow-number">02</span><div><b>낮</b><p>밤 결과를 확인하고 생존자들이 함께 토론합니다.</p></div></div>
+<div class="flow-arrow" aria-hidden="true">↓</div>
+<div class="flow-step"><span class="flow-number">03</span><div><b>투표</b><p>마피아로 의심되는 사람에게 투표하고, 최다 득표자를 처형합니다.</p></div></div>
+</div>
+<p class="flow-repeat">승패가 결정될 때까지 <b>밤 → 낮 → 투표</b>를 반복합니다.</p>
+<div class="flow-win"><b>시민팀 승리</b> · 마피아 2명을 모두 처형하면 승리<br><b>마피아팀 승리</b> · 생존 마피아 수가 시민팀 생존자 수와 같아지면 승리</div>
 </div></section>
 <div class="footer">내 역할 외 다른 참가자의 역할은 공개되지 않습니다.</div></main>
 <script type="module">
@@ -76,7 +79,9 @@ import{getDatabase,ref,get,set,update,onValue,onDisconnect,serverTimestamp}from'
 import{firebaseConfig}from'./firebase-config.js';
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getDatabase(app),room='main',$=id=>document.getElementById(id);
 let uid=null,stopP=null,stopG=null,stopR=null,gameAssigned=false,myRoleKey=null,myJoinedAt=0;
-function renderMyRole(){const k=myRoleKey;if(gameAssigned&&k&&rules[k]){$('roleCard').classList.remove('hide');$('myRole').textContent=({mafia:'마피아',police:'경찰',doctor:'의사',citizen:'시민'})[k];$('myRole').className='role '+(k==='mafia'?'mafia':'town');$('roleDesc').textContent=rules[k].desc}else $('roleCard').classList.add('hide')}
+let roleRevealTimer=null;
+function hideMyRole(){if(roleRevealTimer){clearTimeout(roleRevealTimer);roleRevealTimer=null}$('roleSecret').classList.add('hide');$('revealRoleBtn').classList.remove('hide');$('revealRoleBtn').textContent='눌러서 내 역할 확인하기'}
+function renderMyRole(){const k=myRoleKey;if(gameAssigned&&k&&rules[k]){$('roleCard').classList.remove('hide');$('myRole').textContent=({mafia:'마피아',police:'경찰',doctor:'의사',citizen:'시민'})[k];$('myRole').className='role '+(k==='mafia'?'mafia':'town');$('roleDesc').textContent=rules[k].desc}else{$('roleCard').classList.add('hide');hideMyRole()}}
 const rules={
 mafia:{title:'마피아 2명',desc:'마피아팀 · 밤에 제거할 플레이어를 지목합니다.',items:['첫날 밤 서로의 정체를 확인합니다.','매일 밤 둘이 합의해 제거할 플레이어 한 명을 지목합니다.','낮에는 시민인 척 토론과 투표에 참여합니다.']},
 police:{title:'경찰 1명',desc:'시민팀 · 밤마다 한 명의 마피아 여부를 확인합니다.',items:['매일 밤 한 명을 지목해 마피아인지 확인합니다.','사회자가 마피아 여부를 고개 끄덕임/가로젓기로 알려줍니다.','정체를 공개할 시점은 본인이 판단합니다.']},
@@ -86,6 +91,7 @@ function showRule(k){const r=rules[k];$('ruleContent').innerHTML='<div class="ru
 $('tabs').onclick=e=>{const b=e.target.closest('[data-role]');if(b)showRule(b.dataset.role)};showRule('mafia');
 function listen(){stopP?.();stopG?.();stopR?.();stopP=onValue(ref(db,'rooms/main/presence'),s=>{$('count').textContent=Object.values(s.val()||{}).filter(p=>p.online).length+' / 9'});stopG=onValue(ref(db,'rooms/main/game'),s=>{const g=s.val()||{};gameAssigned=g.status==='assigned'&&Number(g.assignedAt||0)>=myJoinedAt;$('gameStatus').textContent=gameAssigned?'역할 배분 완료!':'역할 배분 대기 중';$('waitText').classList.toggle('hide',gameAssigned);renderMyRole()});stopR=onValue(ref(db,'rooms/main/roles/'+uid),s=>{myRoleKey=s.val();renderMyRole()},e=>{$('gameStatus').textContent='역할 조회 실패: '+e.message;$('waitText').classList.remove('hide')})}
 $('joinBtn').onclick=async()=>{const name=$('nickname').value.trim();if(!name){$('joinMsg').textContent='닉네임을 입력해 주세요.';return}if(!uid)return;try{const p=ref(db,'rooms/main/presence/'+uid);await set(p,{nickname:name,online:true,joinedAt:serverTimestamp()});const joined=await get(p);myJoinedAt=Number(joined.val()?.joinedAt||Date.now());await onDisconnect(p).update({online:false});$('joinPanel').classList.add('hide');$('roomPanel').classList.remove('hide');$('myName').textContent=name;listen()}catch(e){$('joinMsg').textContent='참가 실패: '+e.message}};
+$('revealRoleBtn').onclick=()=>{if(!gameAssigned||!myRoleKey||!rules[myRoleKey])return;$('roleSecret').classList.remove('hide');$('revealRoleBtn').classList.add('hide');if(roleRevealTimer)clearTimeout(roleRevealTimer);roleRevealTimer=setTimeout(hideMyRole,5000)};
 $('leaveBtn').onclick=async()=>{if(uid)await update(ref(db,'rooms/main/presence/'+uid),{online:false});location.reload()};
 const savedTheme=localStorage.getItem('workshop-theme');
 function applyTheme(theme){document.documentElement.setAttribute('data-theme',theme);localStorage.setItem('workshop-theme',theme);document.querySelectorAll('[data-theme-choice]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.themeChoice===theme)))}
