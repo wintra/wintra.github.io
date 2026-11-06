@@ -15,7 +15,7 @@ import{getDatabase,ref,get,set,update,onValue,onDisconnect,serverTimestamp}from'
 import{firebaseConfig}from'./firebase-config.js';
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getDatabase(app),$=id=>document.getElementById(id);
 let uid=null,nickname='',joinedAt=0,current=null,roster=null,assigned=false,gameStatus={},scores={},answeredRound='',stopCurrent=null,stopOwn=null;
-const root='rooms/main',presenceRef=()=>ref(db,root+'/presence/'+uid),currentRef=ref(db,root+'/teamGame/current'),statusRef=ref(db,root+'/teamGame/status'),scoreRef=ref(db,root+'/teamGame/scoreboard');
+const root='rooms/main',presenceRef=()=>ref(db,root+'/presence/'+uid),currentRef=ref(db,root+'/teamGame/current'),statusRef=ref(db,root+'/teamGame/status'),finalResultsRef=ref(db,root+'/teamGame/finalResults');
 function norm(s){return String(s??'').trim().replace(/\s+/g,' ').toLocaleLowerCase('ko-KR')}
 function renderTeam(){
  $('teamInfo').textContent=assigned&&roster?'내 팀: '+roster.teamName:'팀 배정을 기다리고 있습니다.';
@@ -27,7 +27,7 @@ function renderQuestion(){
  const active=current&&current.active===true&&current.roundId&&gameStatus.active===true;
  const ended=gameStatus.active===false&&gameStatus.endedAt;
  $('finalPanel').classList.toggle('hide',!ended);$('teamWaiting').classList.toggle('hide',!!active||!!ended);$('questionPanel').classList.toggle('hide',!active);
- if(ended){const list=Object.entries(scores||{}).sort((a,b)=>Number(b[1])-Number(a[1]));$('finalScores').innerHTML=list.map(([n,v],i)=>'<div class="score"><b>'+(i+1)+'위 · '+n+'</b><b>'+Number(v||0)+'점</b></div>').join('')||'결과가 없습니다.';return}
+ if(ended){const list=Object.entries(scores?.scores||{}).sort((a,b)=>Number(b[1])-Number(a[1]));$('finalScores').innerHTML=list.map(([n,v],i)=>'<div class="score"><b>'+(i+1)+'위 · '+n+'</b><b>'+Number(v||0)+'점</b></div>').join('')||'결과가 없습니다.';return}
  if(!active)return;
  $('questionType').textContent=current.type==='choice'?'텔레파시 · 이지선다':'주관식';
  $('question').textContent=current.question||'질문';
@@ -65,7 +65,7 @@ function startListeners(){
  onValue(ref(db,root+'/teamAssignmentStatus'),s=>{assigned=!!(s.val()&&s.val().complete&&roster);renderTeam()});
  onValue(currentRef,s=>{current=s.val()||null;renderQuestion()});
  onValue(statusRef,s=>{gameStatus=s.val()||{};renderQuestion()});
- onValue(scoreRef,s=>{scores=s.val()||{};renderQuestion()});
+ onValue(finalResultsRef,s=>{scores=s.val()||{};renderQuestion()});
 }
 onAuthStateChanged(auth,u=>{if(u){uid=u.uid;$('conn').textContent='서버 연결됨';}else signInAnonymously(auth).catch(e=>{$('conn').textContent='연결 오류';$('joinMsg').textContent=e.message})});
 const saved=localStorage.getItem('workshopNickname');if(saved)$('nickname').value=saved;
