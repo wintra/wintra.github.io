@@ -82,10 +82,14 @@
             ".write": "auth != null && auth.uid === '0Z4gmWcMJ3VqrzheeQniDADL5q62'"
           },
           "scoreboard": {
-            ".read": "auth != null",
+            ".read": "auth != null && auth.uid === '0Z4gmWcMJ3VqrzheeQniDADL5q62'",
             ".write": "auth != null && auth.uid === '0Z4gmWcMJ3VqrzheeQniDADL5q62'"
           },
           "status": {
+            ".read": "auth != null",
+            ".write": "auth != null && auth.uid === '0Z4gmWcMJ3VqrzheeQniDADL5q62'"
+          },
+          "finalResults": {
             ".read": "auth != null",
             ".write": "auth != null && auth.uid === '0Z4gmWcMJ3VqrzheeQniDADL5q62'"
           }
