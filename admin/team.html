@@ -8,14 +8,13 @@
 <section class="panel" id="loginPanel"><h1>팀 게임 진행자 로그인</h1><p class="small muted">마피아 관리와 동일한 진행자 계정으로 로그인하세요.</p><input id="email" type="email" placeholder="진행자 이메일"><input id="password" type="password" placeholder="비밀번호"><button id="loginBtn" style="width:100%">로그인</button><p id="loginMsg" class="small"></p></section>
 <div id="console" class="hide">
 <section class="panel"><div class="row"><div><div class="small muted">접속 참가자</div><div class="stat" id="peopleCount">0명</div></div><div><div class="small muted">팀 배정 상태</div><b id="assignStatus">미완료</b></div></div><p class="small muted">참가자별 팀을 직접 선택한 다음 ‘팀원 배정 완료’를 누르세요. 완료하면 각 참가자 화면에 같은 팀원의 닉네임이 표시됩니다.</p><label class="small">팀 이름 (쉼표로 구분)</label><input id="teamNamesInput" value="1팀, 2팀"><button id="saveTeamNames" class="secondary" style="width:100%">팀 이름 저장</button><div id="teamPlayers"></div><button id="assignComplete" style="width:100%;margin-top:12px">팀원 배정 완료</button><p id="teamMsg" class="small" aria-live="polite"></p></section>
-<section class="panel"><h2>질문 진행</h2><p class="small muted">질문을 전송하면 참가자 휴대폰에 실시간으로 표시됩니다. 한 질문에서 팀원 전원이 같은 답을 제출하면 해당 팀에 1점을 부여합니다.</p>
-<label class="small">게임 유형</label><select id="gameType"><option value="choice">텔레파시 · 이지선다</option><option value="subjective">주관식</option></select>
-<label class="small">질문</label><input id="question" placeholder="예: 복권 번호는?">
-<div id="choiceFields"><label class="small">선택지 1</label><input id="optionA" value="자동"><label class="small">선택지 2</label><input id="optionB" value="수동"></div>
-<div class="row"><button id="sendQuestion">질문 전송</button><button id="closeQuestion" class="secondary">질문 종료 · 점수 반영</button></div>
+<section class="panel"><h2>질문 진행</h2><p class="small muted">사전에 준비한 질문 48개 중 하나를 무작위로 뽑아 참가자 휴대폰에 전송합니다. 출제한 질문은 목록을 모두 사용하기 전까지 중복되지 않습니다. 팀원 전원이 같은 답을 제출하면 해당 팀에 1점을 부여합니다.</p>
+<label class="small">랜덤 출제 범위</label><select id="gameType"><option value="all">전체 질문 랜덤 (이지선다 + 주관식)</option><option value="choice">이지선다만</option><option value="subjective">주관식만</option></select>
+<div class="notice small" id="questionPoolInfo">준비된 질문 48개 · 출제한 질문은 모두 사용하기 전까지 다시 나오지 않습니다.</div>
+<div class="row"><button id="sendQuestion">랜덤 질문 뽑기 및 전송</button><button id="closeQuestion" class="secondary">질문 종료 · 점수 반영</button></div>
 <p id="questionStatus" class="small" aria-live="polite">진행 중인 질문이 없습니다.</p><div id="liveResults"></div></section>
 <section class="panel"><h2>누적 점수 및 게임 종료</h2><div id="scoreboard"></div><button id="endGame" style="width:100%;background:#b42332;margin-top:12px">게임 종료 및 최종 결과 공개</button><p id="finalStatus" class="small" aria-live="polite"></p><div id="finalResults"></div></section>
-<div class="row"><button id="logoutBtn" class="secondary">로그아웃</button><a href="index.html" style="align-self:center;color:var(--accent)">관리 메인</a><a href="../index.html" style="align-self:center;color:var(--accent)">홈</a></div>
+<div class="row"><button id="logoutBtn" class="secondary">로그아웃</button><a href="index.html" style="align-self:center;color:var(--accent)">관리 메인</a></div>
 </div></main>
 <script type="module">
 import{initializeApp}from'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
@@ -54,12 +53,28 @@ $('assignComplete').onclick=async()=>{
  }catch(e){say('teamMsg',stage+' 단계 실패: '+(e.code||'')+' '+e.message)}
 };
 $('gameType').onchange=()=>{$('choiceFields').classList.toggle('hide',$('gameType').value!=='choice')};
-const presets=[['복권 번호는?','자동','수동'],['탕수육 소스는?','부먹','찍먹'],['중국집에 가면?','짜장면','짬뽕'],['치킨은?','후라이드','양념'],['냉면은?','물냉면','비빔냉면'],['휴가 장소는?','바다','산'],['더 좋은 계절은?','여름','겨울'],['회식 술은?','소주','맥주'],['여행 스타일은?','계획형','즉흥형']];
+const choiceQuestions=[{"q":"중국집에 가면?","a":"짜장면","b":"짬뽕"},{"q":"탕수육 소스는?","a":"부먹","b":"찍먹"},{"q":"치킨은?","a":"후라이드","b":"양념"},{"q":"냉면은?","a":"물냉면","b":"비빔냉면"},{"q":"휴가 장소는?","a":"바다","b":"산"},{"q":"더 좋은 계절은?","a":"여름","b":"겨울"},{"q":"회식 술은?","a":"소주","b":"맥주"},{"q":"나는?","a":"아침형 인간","b":"저녁형 인간"},{"q":"고기는?","a":"삼겹살","b":"소고기"},{"q":"근무 방식은?","a":"재택근무","b":"사무실 출근"},{"q":"여행 스타일은?","a":"계획형","b":"즉흥형"},{"q":"반려동물은?","a":"강아지","b":"고양이"},{"q":"커피는?","a":"아이스 아메리카노","b":"따뜻한 아메리카노"},{"q":"붕어빵은?","a":"팥","b":"슈크림"},{"q":"노래방에서는?","a":"발라드","b":"댄스곡"},{"q":"스마트폰은?","a":"아이폰","b":"갤럭시"},{"q":"로또 1등에 당첨되면?","a":"바로 퇴사","b":"계속 출근"},{"q":"타임머신이 있다면?","a":"과거로","b":"미래로"},{"q":"민트초코는?","a":"좋다","b":"싫다"},{"q":"여행 숙소는?","a":"호텔","b":"펜션"},{"q":"라면 끓일 때?","a":"물 먼저","b":"스프 먼저"},{"q":"연휴에는?","a":"집콕","b":"여행"},{"q":"복권 번호는?","a":"자동","b":"수동"},{"q":"회식 2차는?","a":"노래방","b":"술집"}];
+const subjectiveQuestions=[{"cat":"음식","q":"라면 하면 떠오르는 브랜드는?"},{"cat":"음식","q":"치킨 하면 떠오르는 프랜차이즈는?"},{"cat":"음식","q":"회식 하면 떠오르는 메뉴는?"},{"cat":"음식","q":"해장 하면 떠오르는 음식은?"},{"cat":"음식","q":"소주 안주 1순위는?"},{"cat":"음식","q":"편의점 하면 떠오르는 브랜드는?"},{"cat":"직장","q":"월요일 하면 떠오르는 단어는?"},{"cat":"직장","q":"퇴근 하면 떠오르는 단어는?"},{"cat":"직장","q":"상사 하면 떠오르는 단어는?"},{"cat":"직장","q":"점심시간 하면 떠오르는 것은?"},{"cat":"추억","q":"90년대 하면 떠오르는 가수는?"},{"cat":"추억","q":"학교 하면 떠오르는 단어는?"},{"cat":"추억","q":"문방구 하면 떠오르는 것은?"},{"cat":"추억","q":"어린 시절 하면 떠오르는 만화는?"},{"cat":"추억","q":"군대 하면 떠오르는 단어는?"},{"cat":"여행","q":"강릉 하면 떠오르는 음식은?"},{"cat":"여행","q":"강릉 하면 떠오르는 장소는?"},{"cat":"여행","q":"바다 하면 떠오르는 단어는?"},{"cat":"여행","q":"여름 하면 떠오르는 과일은?"},{"cat":"여행","q":"겨울 하면 떠오르는 간식은?"},{"cat":"음식","q":"고기 하면 떠오르는 부위는?"},{"cat":"직장","q":"월급 하면 떠오르는 단어는?"},{"cat":"추억","q":"초등학교 하면 떠오르는 간식은?"},{"cat":"여행","q":"휴가 하면 떠오르는 장소는?"}];
 $('sendQuestion').onclick=async()=>{
  if(!gameStatus.active){say('questionStatus','먼저 팀원 배정을 완료해 주세요.');return}
- const type=$('gameType').value,q=$('question').value.trim(),a=$('optionA').value.trim(),b=$('optionB').value.trim();
- if(!q){say('questionStatus','질문을 입력하세요.');return}if(type==='choice'&&(!a||!b||a===b)){say('questionStatus','서로 다른 선택지 두 개를 입력하세요.');return}
- try{if(current&&current.active)await closeCurrent();const roundId=String(Date.now());const payload={roundId,type,question:q,a:type==='choice'?a:'',b:type==='choice'?b:'',active:true,startedAt:serverTimestamp()};await set(currentRef,payload);say('questionStatus','질문 전송 완료 · 참가자 응답 대기 중');}catch(e){say('questionStatus','질문 전송 실패: '+(e.code||'')+' '+e.message)}
+ const selected=$('gameType').value;
+ try{
+  if(current&&current.active)await closeCurrent();
+  const snap=await get(historyRef),usedHistory=snap.val()||{};
+  const used=new Set(Object.values(usedHistory).map(x=>x&&x.questionKey).filter(Boolean));
+  if(current&&current.questionKey)used.add(current.questionKey);
+  let pool=[];
+  if(selected==='all'||selected==='choice')pool=pool.concat(choiceQuestions.map((x,i)=>({key:'choice-'+i,type:'choice',question:x.q,a:x.a,b:x.b})));
+  if(selected==='all'||selected==='subjective')pool=pool.concat(subjectiveQuestions.map((x,i)=>({key:'subjective-'+i,type:'subjective',question:x.q,category:x.cat})));
+  let available=pool.filter(x=>!used.has(x.key)),cycled=false;
+  if(!available.length){available=pool;cycled=true}
+  if(!available.length){say('questionStatus','출제할 질문이 없습니다.');return}
+  const chosen=available[Math.floor(Math.random()*available.length)];
+  const roundId=String(Date.now());
+  const payload={roundId,questionKey:chosen.key,type:chosen.type,question:chosen.question,a:chosen.a||'',b:chosen.b||'',category:chosen.category||'',active:true,startedAt:serverTimestamp()};
+  await set(currentRef,payload);
+  say('questionStatus',(cycled?'질문 목록을 한 바퀴 사용해 다시 섞었습니다. · ':'')+'랜덤 질문 전송 완료 · '+(chosen.type==='choice'?'이지선다':'주관식')+' · 응답 대기 중');
+ }catch(e){say('questionStatus','랜덤 질문 전송 실패: '+(e.code||'')+' '+e.message)}
 };
 async function closeCurrent(){
  if(!current||!current.active||!current.roundId)return;
@@ -71,7 +86,7 @@ async function closeCurrent(){
   const allSame=members.length>0&&submitted.length===members.length&&submitted.every(x=>norm(x.v.answer)===norm(submitted[0].v.answer));
   teamScores[name]=allSame?1:0;teamDetails[name]={memberCount:members.length,submitted:submitted.length,unanimous:allSame};
  });
- const hist={roundId,type:current.type,question:current.question,a:current.a||'',b:current.b||'',answers,teamScores,teamDetails,closedAt:Date.now()};
+ const hist={roundId,questionKey:current.questionKey||'',type:current.type,question:current.question,a:current.a||'',b:current.b||'',category:current.category||'',answers,teamScores,teamDetails,closedAt:Date.now()};
  await set(ref(db,base+'/history/'+roundId),hist);
  const scoreSnap=await get(scoreRef),next=scoreSnap.val()||{};teamNames.forEach(n=>next[n]=(Number(next[n])||0)+(teamScores[n]||0));await set(scoreRef,next);
  await update(currentRef,{active:false,endedAt:serverTimestamp()});
