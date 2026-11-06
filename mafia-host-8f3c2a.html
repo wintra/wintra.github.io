@@ -46,6 +46,27 @@ button.secondary{background:var(--soft);color:var(--fg);border:1.5px solid var(-
 <section class="panel"><h2>진행자 전용 테스트 모드</h2><p class="notice">현재 접속 중인 실제 참가자를 우선 포함하고, 부족한 인원은 가상 참가자로 채워 총 9명에게 역할을 배분합니다. 테스트 결과는 로컬 미리보기이며 Firebase의 실제 역할 데이터에는 저장하지 않습니다.</p><button id="testAssignBtn" style="width:100%">실제 참가자 + 가상 참가자 역할 배분</button><p id="testMsg" class="small muted">아직 테스트를 실행하지 않았습니다.</p><div id="testCounts" class="small"></div><div id="testAssigned" class="small"></div><button id="testResetBtn" class="secondary" style="width:100%;margin-top:10px">테스트 결과 지우기</button></section>
 <section class="panel"><h2>역할 배분</h2><p class="muted small">마피아 2명 · 경찰 1명 · 의사 1명 · 시민 5명. 접속 중인 플레이어 9명에게만 무작위 배정합니다.</p><div class="actions"><button id="assignBtn" disabled>역할 무작위 배분</button><button id="resetBtn" class="secondary">게임 초기화</button></div><p id="actionMsg" class="small"></p><div id="assigned" class="small"></div></section>
 
+
+<section class="panel" id="groupPanel">
+<h2>게임 참가자 및 팀 구성</h2>
+<p class="muted small">참가자는 공통 참가 페이지에서 닉네임으로 접속합니다. 팀 이름을 정한 뒤 참가자별로 직접 팀을 지정하세요.</p>
+<label class="small">팀 이름 (쉼표로 구분)</label><input id="teamNamesInput" value="1팀, 2팀" placeholder="예: 1팀, 2팀, 3팀">
+<button id="saveTeamNames" class="secondary" style="width:100%">팀 이름 저장</button>
+<p id="teamMsg" class="small muted" aria-live="polite"></p>
+<div id="teamPlayers"></div>
+</section>
+<section class="panel" id="telepathyPanel">
+<h2>텔레파시 이지선다 진행</h2>
+<p class="muted small">질문을 선택하고 시작하면 참가자 휴대폰에 두 선택지가 표시됩니다. 제출 결과와 팀별 일치율은 진행자에게만 표시됩니다.</p>
+<label class="small">질문</label><select id="teleQuestion" style="width:100%;padding:13px;border-radius:12px;background:var(--bg);color:var(--fg);border:1.5px solid var(--line);margin:6px 0 10px"></select>
+<label class="small">선택지 1</label><input id="teleA" value="자동">
+<label class="small">선택지 2</label><input id="teleB" value="수동">
+<div class="row"><button id="teleStart" style="flex:1">참가자에게 질문 전송</button><button id="teleStop" class="secondary" style="flex:1">질문 종료</button></div>
+<p id="teleStatus" class="small muted" aria-live="polite">진행 중인 질문이 없습니다.</p>
+<div id="teleResults"></div>
+</section>
+<section class="panel"><h2>카드게임 관리</h2><p class="muted small">제시어 카드 뽑기는 진행자 화면에서만 실행할 수 있습니다.</p><a href="index.html#keywords">제시어 카드 진행 화면 열기 →</a></section>
+
 <section class="panel"><h2>직업별 룰북</h2><p class="muted small">진행 중에도 각 직업의 규칙과 전체 진행 순서를 확인할 수 있습니다.</p><div class="tabs" id="hostTabs"><button class="active" data-role="mafia">마피아</button><button data-role="police">경찰</button><button data-role="doctor">의사</button><button data-role="citizen">시민</button></div><div id="hostRuleContent"></div>
 <div class="rule" style="margin-top:18px">
 <h3>게임 전체 진행 규칙</h3>
@@ -80,7 +101,7 @@ $('hostTabs').onclick=e=>{const b=e.target.closest('[data-role]');if(b)showHostR
 const room=ref(db,'rooms/main'),presence=ref(db,'rooms/main/presence'),roles=ref(db,'rooms/main/roles'),game=ref(db,'rooms/main/game');
 const roleNames={mafia:'마피아',police:'경찰',doctor:'의사',citizen:'시민'};
 const eliminatedRef=ref(db,'rooms/main/eliminated');
-let people=[],currentUser=null,unsub=null,unsubEliminated=null,eliminated={};
+let people=[],currentUser=null,unsub=null,unsubEliminated=null,eliminated={},teamNames=['1팀','2팀'],teams={},teleCurrent=null,teleAnswers={},stopAnswers=null;
 function msg(id,s){$(id).textContent=s}
 $('loginBtn').onclick=async()=>{msg('loginMsg','로그인 중…');try{await signInWithEmailAndPassword(auth,$('email').value.trim(),$('password').value)}catch(e){msg('loginMsg','로그인 실패: '+e.message)}};
 const savedTheme=localStorage.getItem('workshop-theme');
@@ -91,9 +112,32 @@ document.querySelectorAll('[data-theme-choice]').forEach(b=>b.addEventListener('
 onAuthStateChanged(auth,u=>{currentUser=u;if(!u){$('loginPanel').classList.remove('hide');$('console').classList.add('hide');$('conn').textContent='로그인 필요';return}
 if(u.uid!==ADMIN_UID){$('loginPanel').classList.remove('hide');$('console').classList.add('hide');$('conn').textContent='권한 없음';msg('loginMsg','이 계정은 등록된 진행자 UID와 일치하지 않습니다.');signOut(auth);return}
 $('loginPanel').classList.add('hide');$('console').classList.remove('hide');$('conn').textContent='진행자 인증됨';startListeners();});
-function startListeners(){if(unsub)unsub();if(unsubEliminated)unsubEliminated();unsub=onValue(presence,s=>{const all=s.val()||{};people=Object.entries(all).filter(([uid,p])=>p&&p.online===true).map(([uid,p])=>({uid,nickname:String(p.nickname||'이름 없음')}));render()});unsubEliminated=onValue(eliminatedRef,s=>{eliminated=s.val()||{};render()});onValue(game,s=>{const g=s.val()||{};$('status').textContent=g.status==='assigned'?'역할 배분 완료':'대기 중';$('hint').textContent=g.status==='assigned'?'역할이 배정되었습니다. 참가자는 본인 역할만 확인할 수 있습니다.':'플레이어 9명이 모두 접속하면 역할을 배분할 수 있습니다. 진행자는 9명에 포함되지 않습니다.';});}
-function render(){$('count').textContent=people.length+' / 9';$('players').innerHTML=people.map((p,i)=>{const out=eliminated[p.uid]===true;return '<div class="person"><div class="person-info"><span>'+String(i+1)+'. '+escapeHtml(p.nickname)+'</span><span class="tag">접속 중</span><span class="tag" style="'+(out?'background:#7f1d1d;color:#fee2e2':'background:#14532d;color:#dcfce7')+'">'+(out?'탈락':'생존')+'</span></div><div class="person-actions"><button type="button" class="'+(out?'restore':'secondary')+'" data-elim-uid="'+p.uid+'" data-elim-next="'+(!out)+'">'+(out?'생존 복구':'탈락 처리')+'</button></div></div>'}).join('')||'<p class="muted small">아직 참가자가 없습니다.</p>';$('assignBtn').disabled=people.length!==9;}
+function startListeners(){if(unsub)unsub();if(unsubEliminated)unsubEliminated();unsub=onValue(presence,s=>{const all=s.val()||{};people=Object.entries(all).filter(([uid,p])=>p&&p.online===true).map(([uid,p])=>({uid,nickname:String(p.nickname||'이름 없음')}));render()});unsubEliminated=onValue(eliminatedRef,s=>{eliminated=s.val()||{};render()});onValue(teamNamesRef,s=>{teamNames=Array.isArray(s.val())&&s.val().length?s.val():['1팀','2팀'];renderTeams()});onValue(teamsRef,s=>{teams=s.val()||{};renderTeams();renderTeleResults()});onValue(teleCurrentRef,s=>{teleCurrent=s.val()||null;msg('teleStatus',teleCurrent&&teleCurrent.active?'진행 중: '+teleCurrent.question:'진행 중인 질문이 없습니다.');if(stopAnswers){stopAnswers();stopAnswers=null}if(teleCurrent&&teleCurrent.roundId){stopAnswers=onValue(ref(db,'rooms/main/telepathy/responses/'+teleCurrent.roundId),a=>{teleAnswers=a.val()||{};renderTeleResults()})}else{teleAnswers={};renderTeleResults()}});onValue(game,s=>{const g=s.val()||{};$('status').textContent=g.status==='assigned'?'역할 배분 완료':'대기 중';$('hint').textContent=g.status==='assigned'?'역할이 배정되었습니다. 참가자는 본인 역할만 확인할 수 있습니다.':'플레이어 9명이 모두 접속하면 역할을 배분할 수 있습니다. 진행자는 9명에 포함되지 않습니다.';});}
+function render(){renderTeams();renderTeleResults();$('count').textContent=people.length+' / 9';$('players').innerHTML=people.map((p,i)=>{const out=eliminated[p.uid]===true;return '<div class="person"><div class="person-info"><span>'+String(i+1)+'. '+escapeHtml(p.nickname)+'</span><span class="tag">접속 중</span><span class="tag" style="'+(out?'background:#7f1d1d;color:#fee2e2':'background:#14532d;color:#dcfce7')+'">'+(out?'탈락':'생존')+'</span></div><div class="person-actions"><button type="button" class="'+(out?'restore':'secondary')+'" data-elim-uid="'+p.uid+'" data-elim-next="'+(!out)+'">'+(out?'생존 복구':'탈락 처리')+'</button></div></div>'}).join('')||'<p class="muted small">아직 참가자가 없습니다.</p>';$('assignBtn').disabled=people.length!==9;}
 $('players').onclick=async e=>{const b=e.target.closest('button[data-elim-uid]');if(!b)return;const uid=b.dataset.elimUid,willEliminate=b.dataset.elimNext==='true';if(!uid)return;b.disabled=true;b.textContent='처리 중…';msg('playersMsg','탈락 상태를 Firebase에 저장하고 있습니다…');try{if(willEliminate)await set(ref(db,'rooms/main/eliminated/'+uid),true);else await remove(ref(db,'rooms/main/eliminated/'+uid));msg('playersMsg',willEliminate?'탈락 처리했습니다. 참가자 화면에 안내가 표시됩니다.':'생존 상태로 복구했습니다.');}catch(err){msg('playersMsg','상태 변경 실패: '+(err.code||'')+' '+err.message);b.disabled=false;b.textContent=willEliminate?'탈락 처리':'생존 복구';}};
+
+const teamNamesRef=ref(db,'rooms/main/teamNames'),teamsRef=ref(db,'rooms/main/teams'),teleCurrentRef=ref(db,'rooms/main/telepathy/current');
+function renderTeams(){
+ $('teamNamesInput').value=teamNames.join(', ');
+ $('teamPlayers').innerHTML=people.map(p=>'<div class="person"><div class="person-info"><b>'+escapeHtml(p.nickname)+'</b></div><select data-team-uid="'+p.uid+'" style="max-width:145px;padding:8px;border-radius:9px;background:var(--bg);color:var(--fg);border:1px solid var(--line)"><option value="">팀 미지정</option>'+teamNames.map(n=>'<option value="'+escapeHtml(n)+'" '+(teams[p.uid]===n?'selected':'')+'>'+escapeHtml(n)+'</option>').join('')+'</select></div>').join('')||'<p class="muted small">참가자가 접속하면 여기에 표시됩니다.</p>';
+}
+$('teamPlayers').onchange=async e=>{const s=e.target.closest('select[data-team-uid]');if(!s)return;try{if(s.value)await set(ref(db,'rooms/main/teams/'+s.dataset.teamUid),s.value);else await remove(ref(db,'rooms/main/teams/'+s.dataset.teamUid));msg('teamMsg','팀 배정을 저장했습니다.')}catch(err){msg('teamMsg','팀 배정 실패: '+err.message)}};
+$('saveTeamNames').onclick=async()=>{const names=[...new Set($('teamNamesInput').value.split(',').map(x=>x.trim()).filter(Boolean))];if(names.length<2){msg('teamMsg','팀 이름을 두 개 이상 입력해 주세요.');return}try{await set(teamNamesRef,names);teamNames=names;renderTeams();msg('teamMsg','팀 이름을 저장했습니다.')}catch(e){msg('teamMsg','팀 이름 저장 실패: '+e.message)}};
+const questions=[["중국집에 가면?","짜장면","짬뽕"],["탕수육 소스는?","부먹","찍먹"],["치킨은?","후라이드","양념"],["냉면은?","물냉면","비빔냉면"],["휴가 장소는?","바다","산"],["더 좋은 계절은?","여름","겨울"],["회식 술은?","소주","맥주"],["나는?","아침형 인간","저녁형 인간"],["고기는?","삼겹살","소고기"],["근무 방식은?","재택근무","사무실 출근"],["여행 스타일은?","계획형","즉흥형"],["반려동물은?","강아지","고양이"],["커피는?","아이스 아메리카노","따뜻한 아메리카노"],["붕어빵은?","팥","슈크림"],["노래방에서는?","발라드","댄스곡"],["스마트폰은?","아이폰","갤럭시"],["로또 1등에 당첨되면?","바로 퇴사","계속 출근"],["타임머신이 있다면?","과거로","미래로"],["민트초코는?","좋다","싫다"],["여행 숙소는?","호텔","펜션"],["라면 끓일 때?","물 먼저","스프 먼저"],["연휴에는?","집콕","여행"],["복권 번호는?","자동","수동"],["회식 2차는?","노래방","술집"]];
+$('teleQuestion').innerHTML=questions.map((q,i)=>'<option value="'+i+'">'+q[0]+'</option>').join('');
+$('teleQuestion').onchange=()=>{const q=questions[Number($('teleQuestion').value)];$('teleA').value=q[1];$('teleB').value=q[2]};
+$('teleStart').onclick=async()=>{const q=questions[Number($('teleQuestion').value)],a=$('teleA').value.trim(),b=$('teleB').value.trim();if(!a||!b||a===b){msg('teleStatus','서로 다른 선택지 두 개를 입력해 주세요.');return}const roundId=String(Date.now());try{await set(teleCurrentRef,{roundId,question:q[0],a,b,active:true,startedAt:serverTimestamp()});await set(ref(db,'rooms/main/telepathy/responses/'+roundId),null);msg('teleStatus','질문 전송 완료 · 참가자 응답 대기 중');}catch(e){msg('teleStatus','질문 전송 실패: '+e.message)}};
+$('teleStop').onclick=async()=>{try{await set(teleCurrentRef,{active:false,endedAt:serverTimestamp()});msg('teleStatus','질문을 종료했습니다.')}catch(e){msg('teleStatus','질문 종료 실패: '+e.message)}};
+function renderTeleResults(){
+ if(!teleCurrent||!teleCurrent.active){$('teleResults').innerHTML='';return}
+ const answers=teleAnswers||{},valid=Object.entries(answers).filter(([uid,v])=>v&&['a','b'].includes(v.choice));
+ const total=valid.length,assigned=people.length;
+ let html='<div class="rule"><b>'+escapeHtml(teleCurrent.question||'')+'</b><p>'+escapeHtml(teleCurrent.a)+' : '+valid.filter(x=>x[1].choice==='a').length+'명 · '+escapeHtml(teleCurrent.b)+' : '+valid.filter(x=>x[1].choice==='b').length+'명</p><p class="small muted">응답 '+total+' / 접속 '+assigned+'명</p></div>';
+ teamNames.forEach(name=>{const members=people.filter(p=>teams[p.uid]===name),rows=valid.filter(([uid])=>teams[uid]===name),aN=rows.filter(x=>x[1].choice==='a').length,bN=rows.filter(x=>x[1].choice==='b').length,den=rows.length,pct=den?Math.round(Math.max(aN,bN)/den*100):0;html+='<div class="rule"><b>'+escapeHtml(name)+'</b><p>'+escapeHtml(teleCurrent.a)+' '+aN+'명 · '+escapeHtml(teleCurrent.b)+' '+bN+'명</p><p>팀 내 선택 일치율: <b>'+pct+'%</b> ('+den+'명 응답 / '+members.length+'명 배정)</p></div>'});
+ html+='<h3 class="small">참가자별 응답 (진행자 전용)</h3>'+people.map(p=>{const v=answers[p.uid];return '<div class="roleline">'+escapeHtml(p.nickname)+' · '+escapeHtml(teams[p.uid]||'팀 미지정')+' — <b>'+(v?(v.choice==='a'?escapeHtml(teleCurrent.a):escapeHtml(teleCurrent.b)):'미응답')+'</b></div>'}).join('');
+ $('teleResults').innerHTML=html;
+}
+
 function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function shuffle(a){for(let i=a.length-1;i>0;i--){const b=new Uint32Array(1);crypto.getRandomValues(b);const j=Math.floor(b[0]/4294967296*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
 
