@@ -90,7 +90,15 @@ citizen:{title:'시민 5명',desc:'시민팀 · 토론과 투표로 마피아를
 function showRule(k){const r=rules[k];$('ruleContent').innerHTML='<div class="rule"><h3>'+r.title+'</h3>'+r.desc+'</div><ul>'+r.items.map(x=>'<li class="rule">'+x+'</li>').join('')+'</ul>';document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('active',b.dataset.role===k))}
 $('tabs').onclick=e=>{const b=e.target.closest('[data-role]');if(b)showRule(b.dataset.role)};showRule('mafia');
 function listen(){stopP?.();stopG?.();stopR?.();stopE?.();stopP=onValue(ref(db,'rooms/main/presence'),s=>{$('count').textContent=Object.values(s.val()||{}).filter(p=>p.online).length+' / 9'});stopG=onValue(ref(db,'rooms/main/game'),s=>{const g=s.val()||{};gameAssigned=g.status==='assigned'&&Number(g.assignedAt||0)>=myJoinedAt;$('gameStatus').textContent=gameAssigned?'역할 배분 완료!':'역할 배분 대기 중';$('waitText').classList.toggle('hide',gameAssigned);renderMyRole()});stopR=onValue(ref(db,'rooms/main/roles/'+uid),s=>{myRoleKey=s.val();renderMyRole()},e=>{$('gameStatus').textContent='역할 조회 실패: '+e.message;$('waitText').classList.remove('hide')});stopE=onValue(ref(db,'rooms/main/eliminated/'+uid),s=>{$('eliminatedNotice').classList.toggle('hide',s.val()!==true)},e=>{$('eliminatedNotice').classList.add('hide')})}
-$('joinBtn').onclick=async()=>{const name=$('nickname').value.trim();if(!name){$('joinMsg').textContent='닉네임을 입력해 주세요.';return}if(!uid)return;try{const p=ref(db,'rooms/main/presence/'+uid);await set(p,{nickname:name,online:true,joinedAt:serverTimestamp()});const joined=await get(p);myJoinedAt=Number(joined.val()?.joinedAt||Date.now());await onDisconnect(p).update({online:false});$('joinPanel').classList.add('hide');$('roomPanel').classList.remove('hide');$('myName').textContent=name;listen()}catch(e){$('joinMsg').textContent='참가 실패: '+e.message}};
+async function joinWithName(name, reuseExisting){
+ if(!name){$('joinMsg').textContent='닉네임을 입력해 주세요.';return}if(!uid)return;
+ try{const p=ref(db,'rooms/main/presence/'+uid);let joined;
+  if(reuseExisting){joined=await get(p);if(joined.exists()&&joined.val().nickname===name){await update(p,{online:true})}else{await set(p,{nickname:name,online:true,joinedAt:serverTimestamp()});joined=await get(p)}}
+  else{await set(p,{nickname:name,online:true,joinedAt:serverTimestamp()});joined=await get(p)}
+  if(!joined)joined=await get(p);myJoinedAt=Number(joined.val()?.joinedAt||Date.now());await onDisconnect(p).update({online:false});localStorage.setItem('workshopNickname',name);$('joinPanel').classList.add('hide');$('roomPanel').classList.remove('hide');$('myName').textContent=name;listen();
+ }catch(e){$('joinMsg').textContent='참가 실패: '+(e.code||'')+' '+e.message}
+}
+$('joinBtn').onclick=()=>joinWithName($('nickname').value.trim(),false);
 $('revealRoleBtn').onclick=()=>{if(!gameAssigned||!myRoleKey||!rules[myRoleKey])return;$('roleSecret').classList.remove('hide');$('revealRoleBtn').classList.add('hide');if(roleRevealTimer)clearTimeout(roleRevealTimer);roleRevealTimer=setTimeout(hideMyRole,5000)};
 $('leaveBtn').onclick=async()=>{if(uid)await update(ref(db,'rooms/main/presence/'+uid),{online:false});location.reload()};
 const savedTheme=localStorage.getItem('workshop-theme');
@@ -98,5 +106,7 @@ function applyTheme(theme){document.documentElement.setAttribute('data-theme',th
 const initialTheme=(savedTheme==='light'||savedTheme==='dark')?savedTheme:(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
 applyTheme(initialTheme);
 document.querySelectorAll('[data-theme-choice]').forEach(b=>b.addEventListener('click',()=>applyTheme(b.dataset.themeChoice)));
-onAuthStateChanged(auth,u=>{if(u){uid=u.uid;$('conn').textContent='서버 연결됨'}else signInAnonymously(auth).catch(e=>{$('conn').textContent='연결 오류';$('joinMsg').textContent=e.message})});
+let autoJoinStarted=false;
+onAuthStateChanged(auth,u=>{if(u){uid=u.uid;$('conn').textContent='서버 연결됨';const saved=localStorage.getItem('workshopNickname');const auto=new URLSearchParams(location.search).get('autojoin')==='1';if(auto&&saved&&!autoJoinStarted){autoJoinStarted=true;$('nickname').value=saved;joinWithName(saved,true)}}else signInAnonymously(auth).catch(e=>{$('conn').textContent='연결 오류';$('joinMsg').textContent=e.message})});
+const savedNickname=localStorage.getItem('workshopNickname');if(savedNickname)$('nickname').value=savedNickname;
 </script></body></html>
