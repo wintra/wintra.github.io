@@ -75,7 +75,8 @@
                 ".read": "auth != null && (auth.uid === $uid || auth.uid === '0Z4gmWcMJ3VqrzheeQniDADL5q62')",
                 ".write": "auth != null && auth.uid === $uid"
               }
-            }
+            },
+            ".write": "auth != null && auth.uid === '0Z4gmWcMJ3VqrzheeQniDADL5q62'"
           },
           "history": {
             ".read": "auth != null && auth.uid === '0Z4gmWcMJ3VqrzheeQniDADL5q62'",
