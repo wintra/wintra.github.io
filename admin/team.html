@@ -95,7 +95,7 @@ $('closeQuestion').onclick=async()=>{try{await closeCurrent()}catch(e){say('ques
 function renderLive(){
  if(!current||!current.active){$('liveResults').innerHTML='<p class="small muted">진행 중인 질문이 없습니다.</p>';return}
  const entries=Object.entries(responses||{}),total=entries.length;
- let html='<div class="rule"><b>'+esc(current.question)+'</b><p class="small">응답 '+total+' / 참가자 '+people.length+'명</p>';
+ let html='<div class="rule"><div class="small muted">현재 출제 질문</div><b>'+esc(current.question)+'</b><div class="row" style="margin:10px 0 6px"><div class="notice"><b>A</b> · '+esc(current.a||'')+'</div><div class="notice"><b>B</b> · '+esc(current.b||'')+'</div></div><p class="small">응답 '+total+' / 참가자 '+people.length+'명</p>';
  teamNames.forEach(n=>{const mem=people.filter(p=>teams[p.uid]===n),rows=mem.map(p=>({p,v:responses[p.uid]})).filter(x=>x.v);html+='<p><b>'+esc(n)+'</b> · '+rows.length+'/'+mem.length+'명 응답 · '+(rows.length?rows.map(x=>esc(x.v.display||x.v.answer)).join(' / '):'응답 대기')+'</p>'});
  html+='</div><div class="small muted">개별 응답 (진행자 전용)</div>'+people.map(p=>'<div class="person"><span>'+esc(p.nickname)+' · '+esc(teams[p.uid]||'팀 미지정')+'</span><span class="answer">'+esc(responses[p.uid]?.display||'미응답')+'</span></div>').join('');$('liveResults').innerHTML=html;
 }
