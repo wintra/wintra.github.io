@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>워크샵 게임 참가</title>
+<style>
+:root{color-scheme:dark;--bg:#09151f;--surface:#102130;--fg:#e7eef4;--muted:#8fa3b3;--line:#294052;--accent:#7c93ff}*{box-sizing:border-box}body{margin:0;padding:24px 16px 40px;background:var(--bg);color:var(--fg);font:16px/1.6 system-ui,'Noto Sans KR',sans-serif}.wrap{max-width:480px;margin:auto}.panel{padding:22px;margin:14px 0;border:1px solid var(--line);border-radius:20px;background:var(--surface)}h1{font-size:29px;margin:0 0 8px}h2{font-size:22px;margin:0 0 12px}.muted{color:var(--muted);font-size:14px}input,button{width:100%;padding:15px;border-radius:13px;font:inherit}input{border:1px solid var(--line);background:var(--bg);color:var(--fg);margin:8px 0 12px}button{border:0;background:var(--accent);color:#07111c;font-weight:800;cursor:pointer;margin-top:10px}.choice{min-height:88px;background:var(--bg);color:var(--fg);border:2px solid var(--line);font-size:22px}.choice:disabled{opacity:.5}.choice.selected{border-color:var(--accent);background:#26365a}.hide{display:none!important}.status{padding:14px;border-radius:12px;background:#182b3c;margin-top:12px}.pill{display:inline-block;border-radius:99px;background:#263449;padding:5px 10px;font-size:12px}.center{text-align:center}
+</style></head><body><main class="wrap">
+<section class="panel" id="joinPanel"><div class="pill">WORKSHOP GAME</div><h1>게임 참가</h1><p class="muted">닉네임을 입력하면 진행자 화면에 표시됩니다.</p><label for="nickname">닉네임</label><input id="nickname" maxlength="12" placeholder="닉네임 입력"><button id="joinBtn">참가하기</button><p id="joinMsg" class="muted" aria-live="polite"></p></section>
+<section class="panel hide" id="roomPanel"><div class="pill">참가 중</div><h2 id="myName"></h2><p class="muted">진행자가 텔레파시 질문을 시작하면 이 화면에 선택지가 나타납니다.</p><div id="waiting" class="status center">진행자가 질문을 준비하고 있습니다.</div><div id="questionPanel" class="hide"><h2 id="question"></h2><button class="choice" id="choiceA"></button><button class="choice" id="choiceB"></button><div id="answerMsg" class="status center" aria-live="polite"></div></div><button class="secondary" id="leaveBtn" style="background:#263449;color:#e7eef4">나가기</button></section>
+<p id="conn" class="muted center">서버 연결 중…</p></main>
+<script type="module">
+import{initializeApp}from'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
+import{getAuth,signInAnonymously,onAuthStateChanged}from'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
+import{getDatabase,ref,set,update,onValue,onDisconnect,serverTimestamp}from'https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js';
+import{firebaseConfig}from'./firebase-config.js';
+const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getDatabase(app),$=id=>document.getElementById(id);
+let uid=null,nickname='',current=null,stopCurrent=null,stopOwn=null,answeredRound='';
+function showQuestion(q){
+ current=q;
+ const active=q&&q.active===true&&q.roundId;
+ $('waiting').classList.toggle('hide',!!active);
+ $('questionPanel').classList.toggle('hide',!active);
+ if(!active)return;
+ $('question').textContent=q.question||'텔레파시 질문';
+ $('choiceA').textContent=q.a||'선택지 1';$('choiceB').textContent=q.b||'선택지 2';
+ $('choiceA').disabled=false;$('choiceB').disabled=false;
+ $('choiceA').classList.remove('selected');$('choiceB').classList.remove('selected');
+ $('answerMsg').textContent='두 선택지 중 하나를 선택해 주세요.';
+ if(stopOwn)stopOwn();
+ stopOwn=onValue(ref(db,'rooms/main/telepathy/responses/'+q.roundId+'/'+uid),s=>{
+  const v=s.val();if(v&&v.choice){answeredRound=q.roundId;$('choiceA').disabled=true;$('choiceB').disabled=true;$('choice'+(v.choice==='a'?'A':'B')).classList.add('selected');$('answerMsg').textContent='선택 완료! 진행자에게 응답이 전달됐습니다.'}
+ });
+}
+async function choose(choice){
+ if(!current||!current.active||!current.roundId||answeredRound===current.roundId)return;
+ $('choiceA').disabled=true;$('choiceB').disabled=true;
+ try{await set(ref(db,'rooms/main/telepathy/responses/'+current.roundId+'/'+uid),{choice,answeredAt:serverTimestamp()});}
+ catch(e){$('answerMsg').textContent='전송 실패: '+e.message;$('choiceA').disabled=false;$('choiceB').disabled=false}
+}
+$('choiceA').onclick=()=>choose('a');$('choiceB').onclick=()=>choose('b');
+$('joinBtn').onclick=async()=>{
+ nickname=$('nickname').value.trim();if(!nickname){$('joinMsg').textContent='닉네임을 입력해 주세요.';return}if(!uid)return;
+ try{const p=ref(db,'rooms/main/presence/'+uid);await set(p,{nickname,online:true,joinedAt:serverTimestamp()});await onDisconnect(p).update({online:false});$('joinPanel').classList.add('hide');$('roomPanel').classList.remove('hide');$('myName').textContent=nickname;stopCurrent=onValue(ref(db,'rooms/main/telepathy/current'),s=>showQuestion(s.val()||null),e=>{$('answerMsg').textContent='질문을 불러오지 못했습니다: '+e.message});}
+ catch(e){$('joinMsg').textContent='참가 실패: '+(e.code||'')+' '+e.message}
+};
+$('leaveBtn').onclick=async()=>{if(uid)await update(ref(db,'rooms/main/presence/'+uid),{online:false});location.reload()};
+onAuthStateChanged(auth,u=>{if(u){uid=u.uid;$('conn').textContent='서버 연결됨'}else signInAnonymously(auth).catch(e=>{$('conn').textContent='연결 오류';$('joinMsg').textContent=e.message})});
+</script></body></html>
