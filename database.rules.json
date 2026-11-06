@@ -21,6 +21,35 @@
         "game": {
           ".read": "auth != null",
           ".write": "auth != null && auth.uid === '0Z4gmWcMJ3VqrzheeQniDADL5q62'"
+        },
+        "eliminated": {
+          ".read": "auth != null && auth.uid === '0Z4gmWcMJ3VqrzheeQniDADL5q62'",
+          ".write": "auth != null && auth.uid === '0Z4gmWcMJ3VqrzheeQniDADL5q62'",
+          "$uid": {
+            ".read": "auth != null && (auth.uid === $uid || auth.uid === '0Z4gmWcMJ3VqrzheeQniDADL5q62')"
+          }
+        },
+        "teamNames": {
+          ".read": "auth != null && auth.uid === '0Z4gmWcMJ3VqrzheeQniDADL5q62'",
+          ".write": "auth != null && auth.uid === '0Z4gmWcMJ3VqrzheeQniDADL5q62'"
+        },
+        "teams": {
+          ".read": "auth != null && auth.uid === '0Z4gmWcMJ3VqrzheeQniDADL5q62'",
+          ".write": "auth != null && auth.uid === '0Z4gmWcMJ3VqrzheeQniDADL5q62'"
+        },
+        "telepathy": {
+          "current": {
+            ".read": "auth != null",
+            ".write": "auth != null && auth.uid === '0Z4gmWcMJ3VqrzheeQniDADL5q62'"
+          },
+          "responses": {
+            ".read": "auth != null && auth.uid === '0Z4gmWcMJ3VqrzheeQniDADL5q62'",
+            "$roundId": {
+              "$uid": {
+                ".write": "auth != null && auth.uid === $uid"
+              }
+            }
+          }
         }
       }
     }
