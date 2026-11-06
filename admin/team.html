@@ -53,12 +53,12 @@ async function closeCurrent(){
  const roundId=current.roundId,already=await get(ref(db,responsesBase+'/'+roundId));
  const answers=already.val()||{},teamScores={},teamDetails={};
  teamNames.forEach(name=>{
-  const members=people.filter(p=>teams[p.uid]===name),submitted=members.map(p=>({p,v:answers[p.uid]})).filter(x=>x.v&&typeof x.v.answer==='string'&&x.v.answer.trim()!=='');
+  const members=Object.entries(teams).filter(([uid,team])=>team===name).map(([uid])=>({uid,nickname:String(presenceData[uid]?.nickname||uid)})),submitted=members.map(p=>({p,v:answers[p.uid]})).filter(x=>x.v&&typeof x.v.answer==='string'&&x.v.answer.trim()!=='');
   const allSame=members.length>0&&submitted.length===members.length&&submitted.every(x=>norm(x.v.answer)===norm(submitted[0].v.answer));
   teamScores[name]=allSame?1:0;teamDetails[name]={memberCount:members.length,submitted:submitted.length,unanimous:allSame};
  });
  const hist={roundId,type:current.type,question:current.question,a:current.a||'',b:current.b||'',answers,teamScores,teamDetails,closedAt:Date.now()};
- await set(ref(db,historyRef.toString()+'/'+roundId),hist);
+ await set(ref(db,base+'/history/'+roundId),hist);
  const next={...scores};teamNames.forEach(n=>next[n]=(Number(next[n])||0)+(teamScores[n]||0));await set(scoreRef,next);
  await update(currentRef,{active:false,endedAt:serverTimestamp()});
  say('questionStatus','질문 종료 · 팀별 만장일치 점수를 반영했습니다.');
