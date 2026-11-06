@@ -51,6 +51,44 @@
               }
             }
           }
+        },
+        "teamRosterByUid": {
+          ".read": false,
+          ".write": "auth != null && auth.uid === '0Z4gmWcMJ3VqrzheeQniDADL5q62'",
+          "$uid": {
+            ".read": "auth != null && (auth.uid === $uid || auth.uid === '0Z4gmWcMJ3VqrzheeQniDADL5q62')"
+          }
+        },
+        "teamAssignmentStatus": {
+          ".read": "auth != null",
+          ".write": "auth != null && auth.uid === '0Z4gmWcMJ3VqrzheeQniDADL5q62'"
+        },
+        "teamGame": {
+          "current": {
+            ".read": "auth != null",
+            ".write": "auth != null && auth.uid === '0Z4gmWcMJ3VqrzheeQniDADL5q62'"
+          },
+          "responses": {
+            ".read": "auth != null && auth.uid === '0Z4gmWcMJ3VqrzheeQniDADL5q62'",
+            "$roundId": {
+              "$uid": {
+                ".read": "auth != null && (auth.uid === $uid || auth.uid === '0Z4gmWcMJ3VqrzheeQniDADL5q62')",
+                ".write": "auth != null && auth.uid === $uid"
+              }
+            }
+          },
+          "history": {
+            ".read": "auth != null && auth.uid === '0Z4gmWcMJ3VqrzheeQniDADL5q62'",
+            ".write": "auth != null && auth.uid === '0Z4gmWcMJ3VqrzheeQniDADL5q62'"
+          },
+          "scoreboard": {
+            ".read": "auth != null",
+            ".write": "auth != null && auth.uid === '0Z4gmWcMJ3VqrzheeQniDADL5q62'"
+          },
+          "status": {
+            ".read": "auth != null",
+            ".write": "auth != null && auth.uid === '0Z4gmWcMJ3VqrzheeQniDADL5q62'"
+          }
         }
       }
     }
