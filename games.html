@@ -11,7 +11,7 @@
 <script type="module">
 import{initializeApp}from'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import{getAuth,signInAnonymously,onAuthStateChanged}from'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
-import{getDatabase,ref,set,update,onValue,onDisconnect,serverTimestamp}from'https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js';
+import{getDatabase,ref,get,set,update,onValue,onDisconnect,serverTimestamp}from'https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js';
 import{firebaseConfig}from'./firebase-config.js';
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getDatabase(app),$=id=>document.getElementById(id);
 let uid=null,nickname='',joinedAt=0,current=null,roster=null,assigned=false,gameStatus={},scores={},answeredRound='',stopCurrent=null,stopOwn=null;
@@ -53,7 +53,7 @@ $('choiceA').onclick=()=>submitAnswer('a',current?.a||'선택지 1');$('choiceB'
 $('submitSubjective').onclick=()=>{const v=$('subjectiveAnswer').value.trim();if(!v){$('answerMsg').textContent='답변을 입력해 주세요.';return}submitAnswer(v,v)};
 $('joinBtn').onclick=async()=>{
  nickname=$('nickname').value.trim();if(!nickname){$('joinMsg').textContent='닉네임을 입력해 주세요.';return}if(!uid)return;
- try{const p=presenceRef();await set(p,{nickname,online:true,joinedAt:serverTimestamp()});await onDisconnect(p).update({online:false});const s=await new Promise(resolve=>onValue(p,x=>resolve(x),{onlyOnce:true}));joinedAt=Number(s.val()?.joinedAt||Date.now());localStorage.setItem('workshopNickname',nickname);$('joinPanel').classList.add('hide');$('menuPanel').classList.remove('hide');$('myName').textContent=nickname;}
+ try{const p=presenceRef();await set(p,{nickname,online:true,joinedAt:serverTimestamp()});await onDisconnect(p).update({online:false});const s=await get(p);joinedAt=Number(s.val()?.joinedAt||Date.now());localStorage.setItem('workshopNickname',nickname);$('joinPanel').classList.add('hide');$('menuPanel').classList.remove('hide');$('myName').textContent=nickname;startListeners();}
  catch(e){$('joinMsg').textContent='참가 실패: '+(e.code||'')+' '+e.message}
 };
 $('mafiaBtn').onclick=()=>location.href='mafia.html?autojoin=1';
