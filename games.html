@@ -5,8 +5,8 @@
 *{box-sizing:border-box}body{margin:0;padding:22px 15px 40px;background:var(--bg);color:var(--fg);font:16px/1.6 system-ui,'Noto Sans KR',sans-serif}.wrap{max-width:520px;margin:auto}.panel{padding:21px;margin:13px 0;border:1px solid var(--line);border-radius:20px;background:var(--surface)}h1{font-size:29px;margin:0 0 8px}h2{font-size:21px;margin:0 0 12px}.muted{color:var(--muted);font-size:14px}input,button{width:100%;padding:14px;border-radius:13px;font:inherit}input{border:1px solid var(--line);background:var(--bg);color:var(--fg);margin:8px 0 12px}button{border:0;background:var(--accent);color:white;font-weight:800;cursor:pointer;margin-top:9px}.secondary{background:var(--soft);color:var(--fg);border:1px solid var(--line)}.choice{min-height:82px;background:var(--bg);color:var(--fg);border:2px solid var(--line);font-size:21px}.choice.selected{border-color:var(--accent);background:var(--soft)}.choice:disabled{opacity:.65}.hide{display:none!important}.status{padding:13px;border-radius:12px;background:var(--soft);margin-top:12px}.pill{display:inline-block;border-radius:99px;background:var(--soft);padding:5px 10px;font-size:12px}.menu{display:grid;grid-template-columns:1fr 1fr;gap:10px}.menu button{min-height:110px;text-align:left;padding:15px}.menu button span{display:block;font-size:13px;font-weight:400;opacity:.85;margin-top:5px}.member{display:inline-block;background:var(--soft);padding:6px 10px;border-radius:99px;margin:4px;font-size:13px}.score{display:flex;justify-content:space-between;border-bottom:1px solid var(--line);padding:9px 0}.score:last-child{border:0}.center{text-align:center}
 </style></head><body><main class="wrap">
 <section class="panel" id="joinPanel"><div class="pill">WORKSHOP GAME</div><h1>게임 참가</h1><p class="muted">닉네임을 입력하면 마피아 게임과 팀 대항 게임에 참여할 수 있습니다.</p><label for="nickname">닉네임 (최대 12자)</label><input id="nickname" maxlength="12" placeholder="닉네임 입력"><button id="joinBtn">참가하기</button><p id="joinMsg" class="muted" aria-live="polite"></p></section>
-<section class="panel hide" id="menuPanel"><div class="pill">참가 완료</div><h2 id="myName"></h2><p class="muted">참여할 게임을 선택하세요.</p><div class="menu"><button id="mafiaBtn">마피아 게임<span>내 역할 확인 및 룰북</span></button><button id="teamBtn" class="secondary">팀 대항 게임<span>텔레파시 · 이지선다 · 주관식</span></button></div><button id="changeName" class="secondary">다른 닉네임으로 다시 참가</button></section>
-<section class="panel hide" id="teamPanel"><div class="pill">TEAM GAME</div><h2>팀 대항 게임</h2><div id="teamInfo" class="status">팀 배정을 기다리고 있습니다.</div><div id="teamMembers"></div><div id="teamWaiting" class="status center">진행자가 팀 게임을 준비하고 있습니다.</div><div id="questionPanel" class="hide"><p class="muted" id="questionType"></p><h2 id="question"></h2><div id="choiceArea" class="hide"><button class="choice" id="choiceA"></button><button class="choice" id="choiceB"></button></div><div id="subjectiveArea" class="hide"><input id="subjectiveAnswer" maxlength="80" placeholder="답변을 입력하세요"><button id="submitSubjective">답변 제출</button></div><div id="answerMsg" class="status center" aria-live="polite"></div></div><div id="finalPanel" class="hide"><h2>최종 결과</h2><div id="finalScores"></div></div><button id="backMenu" class="secondary">게임 선택으로 돌아가기</button></section>
+<section class="panel hide" id="menuPanel"><div class="pill">참가 완료</div><h2 id="myName"></h2><p class="muted">참여할 게임을 선택하세요.</p><div class="menu"><button id="mafiaBtn">마피아 게임<span>내 역할 확인 및 룰북</span></button><button id="teamBtn" class="secondary">팀 대항 게임<span>텔레파시 · 이지선다</span></button></div><button id="changeName" class="secondary">다른 닉네임으로 다시 참가</button></section>
+<section class="panel hide" id="teamPanel"><div class="pill">TEAM GAME</div><h2>팀 대항 게임</h2><div id="teamInfo" class="status">팀 배정을 기다리고 있습니다.</div><div id="teamMembers"></div><div id="teamWaiting" class="status center">진행자가 팀 게임을 준비하고 있습니다.</div><div id="questionPanel" class="hide"><p class="muted" id="questionType"></p><h2 id="question"></h2><div id="choiceArea" class="hide"><button class="choice" id="choiceA"></button><button class="choice" id="choiceB"></button></div><div id="answerMsg" class="status center" aria-live="polite"></div></div><div id="finalPanel" class="hide"><h2>최종 결과</h2><div id="finalScores"></div></div><button id="backMenu" class="secondary">게임 선택으로 돌아가기</button></section>
 <p id="conn" class="muted center">서버 연결 중…</p></main>
 <script type="module">
 import{initializeApp}from'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
@@ -29,28 +29,28 @@ function renderQuestion(){
  $('finalPanel').classList.toggle('hide',!ended);$('teamWaiting').classList.toggle('hide',!!active||!!ended);$('questionPanel').classList.toggle('hide',!active);
  if(ended){const list=Object.entries(scores?.scores||{}).sort((a,b)=>Number(b[1])-Number(a[1]));$('finalScores').innerHTML=list.map(([n,v],i)=>'<div class="score"><b>'+(i+1)+'위 · '+n+'</b><b>'+Number(v||0)+'점</b></div>').join('')||'결과가 없습니다.';return}
  if(!active)return;
- $('questionType').textContent=current.type==='choice'?'텔레파시 · 이지선다':'주관식';
+ $('questionType').textContent='텔레파시 · 이지선다';
  $('question').textContent=current.question||'질문';
- $('choiceArea').classList.toggle('hide',current.type!=='choice');$('subjectiveArea').classList.toggle('hide',current.type!=='subjective');
+ $('choiceArea').classList.remove('hide');
  if(current.type==='choice'){$('choiceA').textContent=current.a;$('choiceB').textContent=current.b}
  if(stopOwn){stopOwn();stopOwn=null}
- $('choiceA').disabled=false;$('choiceB').disabled=false;$('subjectiveAnswer').disabled=false;$('submitSubjective').disabled=false;
- $('choiceA').classList.remove('selected');$('choiceB').classList.remove('selected');$('answerMsg').textContent='답변을 선택하거나 입력해 주세요.';
+ $('choiceA').disabled=false;$('choiceB').disabled=false;
+ $('choiceA').classList.remove('selected');$('choiceB').classList.remove('selected');$('answerMsg').textContent='답변을 선택해 주세요.';
  stopOwn=onValue(ref(db,root+'/teamGame/responses/'+current.roundId+'/'+uid),s=>{
   const v=s.val();if(!v||!v.answer)return;answeredRound=current.roundId;
-  $('choiceA').disabled=true;$('choiceB').disabled=true;$('subjectiveAnswer').disabled=true;$('submitSubjective').disabled=true;
-  if(current.type==='choice')$('choice'+(v.answer==='a'?'A':'B')).classList.add('selected');else $('subjectiveAnswer').value=v.display||v.answer;
+  $('choiceA').disabled=true;$('choiceB').disabled=true;
+  $('choice'+(v.answer==='a'?'A':'B')).classList.add('selected');
   $('answerMsg').textContent='답변 제출 완료! 다음 질문을 기다려 주세요.';
  });
 }
 async function submitAnswer(answer,display){
  if(!current||!current.active||answeredRound===current.roundId)return;
- $('choiceA').disabled=true;$('choiceB').disabled=true;$('subjectiveAnswer').disabled=true;$('submitSubjective').disabled=true;
+ $('choiceA').disabled=true;$('choiceB').disabled=true;
  try{await set(ref(db,root+'/teamGame/responses/'+current.roundId+'/'+uid),{answer,display,answeredAt:serverTimestamp()});}
- catch(e){$('answerMsg').textContent='답변 제출 실패: '+(e.code||'')+' '+e.message;$('choiceA').disabled=false;$('choiceB').disabled=false;$('subjectiveAnswer').disabled=false;$('submitSubjective').disabled=false}
+ catch(e){$('answerMsg').textContent='답변 제출 실패: '+(e.code||'')+' '+e.message;$('choiceA').disabled=false;$('choiceB').disabled=false;}
 }
 $('choiceA').onclick=()=>submitAnswer('a',current?.a||'선택지 1');$('choiceB').onclick=()=>submitAnswer('b',current?.b||'선택지 2');
-$('submitSubjective').onclick=()=>{const v=$('subjectiveAnswer').value.trim();if(!v){$('answerMsg').textContent='답변을 입력해 주세요.';return}submitAnswer(v,v)};
+
 $('joinBtn').onclick=async()=>{
  nickname=$('nickname').value.trim();if(!nickname){$('joinMsg').textContent='닉네임을 입력해 주세요.';return}if(!uid)return;
  try{const p=presenceRef();await set(p,{nickname,online:true,joinedAt:serverTimestamp()});await onDisconnect(p).update({online:false});const s=await get(p);joinedAt=Number(s.val()?.joinedAt||Date.now());localStorage.setItem('workshopNickname',nickname);$('joinPanel').classList.add('hide');$('menuPanel').classList.remove('hide');$('myName').textContent=nickname;startListeners();}
