@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>팀 대항 게임 관리</title>
+<style>
+:root{--bg:#e9eff4;--surface:#fff;--fg:#0f1f2c;--muted:#566878;--line:#cfdae3;--soft:#dbe5ec;--accent:#3659c9;color-scheme:light} :root[data-theme=dark]{--bg:#09151f;--surface:#102130;--fg:#e7eef4;--muted:#8fa3b3;--line:#223a4d;--soft:#16293a;--accent:#7c93ff;color-scheme:dark}
+*{box-sizing:border-box}body{margin:0;padding:16px;background:var(--bg);color:var(--fg);font:15px/1.6 system-ui,'Noto Sans KR',sans-serif}.wrap{max-width:650px;margin:auto}.top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0 20px}.panel{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px;margin:13px 0}h1{font-size:28px;margin:0 0 5px}h2{font-size:20px;margin:0 0 12px}.muted,.small{color:var(--muted)}.small{font-size:13px}input,select,button,textarea{font:inherit;border-radius:11px;padding:12px}input,select,textarea{width:100%;background:var(--bg);color:var(--fg);border:1px solid var(--line);margin:5px 0 10px}button{border:0;background:var(--accent);color:white;font-weight:800;cursor:pointer}button.secondary{background:var(--soft);color:var(--fg);border:1px solid var(--line)}button:disabled{opacity:.45}.row{display:flex;gap:8px}.row>*{flex:1;min-width:0}.hide{display:none!important}.person{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}.person:last-child{border:0}.person select{max-width:145px;margin:0}.stat{font-size:30px;font-weight:900}.rule{border:1px solid var(--line);border-radius:13px;padding:13px;margin:9px 0}.notice{padding:12px;background:var(--soft);border-radius:12px}.answer{font-weight:800}.pill{border:1px solid var(--line);border-radius:99px;padding:5px 10px;font-size:12px}
+</style></head><body><main class="wrap">
+<header class="top"><div><div class="small">WORKSHOP GAME / ADMIN</div><b>TEAM GAME CONSOLE</b></div><span class="pill" id="conn">로그인 필요</span></header>
+<section class="panel" id="loginPanel"><h1>팀 게임 진행자 로그인</h1><p class="small muted">마피아 관리와 동일한 진행자 계정으로 로그인하세요.</p><input id="email" type="email" placeholder="진행자 이메일"><input id="password" type="password" placeholder="비밀번호"><button id="loginBtn" style="width:100%">로그인</button><p id="loginMsg" class="small"></p></section>
+<div id="console" class="hide">
+<section class="panel"><div class="row"><div><div class="small muted">접속 참가자</div><div class="stat" id="peopleCount">0명</div></div><div><div class="small muted">팀 배정 상태</div><b id="assignStatus">미완료</b></div></div><p class="small muted">참가자별 팀을 직접 선택한 다음 ‘팀원 배정 완료’를 누르세요. 완료하면 각 참가자 화면에 같은 팀원의 닉네임이 표시됩니다.</p><label class="small">팀 이름 (쉼표로 구분)</label><input id="teamNamesInput" value="1팀, 2팀"><button id="saveTeamNames" class="secondary" style="width:100%">팀 이름 저장</button><div id="teamPlayers"></div><button id="assignComplete" style="width:100%;margin-top:12px">팀원 배정 완료</button><p id="teamMsg" class="small" aria-live="polite"></p></section>
+<section class="panel"><h2>질문 진행</h2><p class="small muted">질문을 전송하면 참가자 휴대폰에 실시간으로 표시됩니다. 한 질문에서 팀원 전원이 같은 답을 제출하면 해당 팀에 1점을 부여합니다.</p>
+<label class="small">게임 유형</label><select id="gameType"><option value="choice">텔레파시 · 이지선다</option><option value="subjective">주관식</option></select>
+<label class="small">질문</label><input id="question" placeholder="예: 복권 번호는?">
+<div id="choiceFields"><label class="small">선택지 1</label><input id="optionA" value="자동"><label class="small">선택지 2</label><input id="optionB" value="수동"></div>
+<div class="row"><button id="sendQuestion">질문 전송</button><button id="closeQuestion" class="secondary">질문 종료 · 점수 반영</button></div>
+<p id="questionStatus" class="small" aria-live="polite">진행 중인 질문이 없습니다.</p><div id="liveResults"></div></section>
+<section class="panel"><h2>누적 점수 및 게임 종료</h2><div id="scoreboard"></div><button id="endGame" style="width:100%;background:#b42332;margin-top:12px">게임 종료 및 최종 결과 공개</button><p id="finalStatus" class="small" aria-live="polite"></p><div id="finalResults"></div></section>
+<div class="row"><button id="logoutBtn" class="secondary">로그아웃</button><a href="index.html" style="align-self:center;color:var(--accent)">관리 메인</a><a href="../index.html" style="align-self:center;color:var(--accent)">홈</a></div>
+</div></main>
+<script type="module">
+import{initializeApp}from'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
+import{getAuth,onAuthStateChanged,signInWithEmailAndPassword,signOut}from'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
+import{getDatabase,ref,set,get,update,remove,onValue,serverTimestamp}from'https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js';
+import{firebaseConfig}from'../firebase-config.js';
+const ADMIN_UID='0Z4gmWcMJ3VqrzheeQniDADL5q62',app=initializeApp(firebaseConfig),auth=getAuth(app),db=getDatabase(app),$=id=>document.getElementById(id);
+const pRef=ref(db,'rooms/main/presence'),namesRef=ref(db,'rooms/main/teamNames'),teamsRef=ref(db,'rooms/main/teams'),rosterRef=ref(db,'rooms/main/teamRosterByUid'),assignRef=ref(db,'rooms/main/teamAssignmentStatus'),base='rooms/main/teamGame',currentRef=ref(db,base+'/current'),responsesBase=base+'/responses',historyRef=ref(db,base+'/history'),scoreRef=ref(db,base+'/scoreboard'),statusRef=ref(db,base+'/status');
+let people=[],presenceData={},teamNames=['1팀','2팀'],teams={},current=null,responses={},history={},scores={},gameStatus={},stopResponses=null;
+function say(id,s){$(id).textContent=s}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function norm(s){return String(s??'').trim().replace(/\s+/g,' ').toLocaleLowerCase('ko-KR')}
+function renderPeople(){
+ $('peopleCount').textContent=people.length+'명';$('teamNamesInput').value=teamNames.join(', ');
+ $('teamPlayers').innerHTML=people.map(p=>'<div class="person"><b>'+esc(p.nickname)+'</b><select data-team="'+p.uid+'"><option value="">팀 미지정</option>'+teamNames.map(n=>'<option value="'+esc(n)+'" '+(teams[p.uid]===n?'selected':'')+'>'+esc(n)+'</option>').join('')+'</select></div>').join('')||'<p class="small muted">참가자가 접속하면 표시됩니다.</p>';
+}
+$('teamPlayers').onchange=async e=>{const s=e.target.closest('select[data-team]');if(!s)return;try{if(s.value)await set(ref(db,'rooms/main/teams/'+s.dataset.team),s.value);else await remove(ref(db,'rooms/main/teams/'+s.dataset.team));say('teamMsg','팀 배정을 저장했습니다.')}catch(err){say('teamMsg','팀 배정 실패: '+(err.code||'')+' '+err.message)}};
+$('saveTeamNames').onclick=async()=>{const ns=[...new Set($('teamNamesInput').value.split(',').map(x=>x.trim()).filter(Boolean))];if(ns.length<2){say('teamMsg','팀 이름을 2개 이상 입력하세요.');return}try{await set(namesRef,ns);teamNames=ns;renderPeople();say('teamMsg','팀 이름을 저장했습니다.')}catch(e){say('teamMsg','저장 실패: '+(e.code||'')+' '+e.message)}};
+$('assignComplete').onclick=async()=>{
+ if(!people.length){say('teamMsg','접속 참가자가 없습니다.');return}
+ const missing=people.filter(p=>!teamNames.includes(teams[p.uid]));if(missing.length){say('teamMsg','팀 미지정 참가자: '+missing.map(p=>p.nickname).join(', '));return}
+ const roster={};teamNames.forEach(name=>{const members=people.filter(p=>teams[p.uid]===name).map(p=>p.nickname);people.filter(p=>teams[p.uid]===name).forEach(p=>roster[p.uid]={teamName:name,memberNames:members})});
+ try{await set(rosterRef,roster);await set(assignRef,{complete:true,completedAt:serverTimestamp()});const initial={};teamNames.forEach(n=>initial[n]=0);await set(scoreRef,initial);await remove(historyRef);await set(statusRef,{active:true,startedAt:serverTimestamp(),endedAt:null});say('assignStatus','배정 완료');say('teamMsg','팀원 배정 완료! 참가자 화면에 팀원 닉네임이 공개됐습니다. 점수 집계를 시작할 수 있습니다.');renderScores()}catch(e){say('teamMsg','팀원 배정 실패: '+(e.code||'')+' '+e.message)}
+};
+$('gameType').onchange=()=>{$('choiceFields').classList.toggle('hide',$('gameType').value!=='choice')};
+const presets=[['복권 번호는?','자동','수동'],['탕수육 소스는?','부먹','찍먹'],['중국집에 가면?','짜장면','짬뽕'],['치킨은?','후라이드','양념'],['냉면은?','물냉면','비빔냉면'],['휴가 장소는?','바다','산'],['더 좋은 계절은?','여름','겨울'],['회식 술은?','소주','맥주'],['여행 스타일은?','계획형','즉흥형']];
+$('sendQuestion').onclick=async()=>{
+ if(!gameStatus.active){say('questionStatus','먼저 팀원 배정을 완료해 주세요.');return}
+ const type=$('gameType').value,q=$('question').value.trim(),a=$('optionA').value.trim(),b=$('optionB').value.trim();
+ if(!q){say('questionStatus','질문을 입력하세요.');return}if(type==='choice'&&(!a||!b||a===b)){say('questionStatus','서로 다른 선택지 두 개를 입력하세요.');return}
+ try{if(current&&current.active)await closeCurrent();const roundId=String(Date.now());const payload={roundId,type,question:q,a:type==='choice'?a:'',b:type==='choice'?b:'',active:true,startedAt:serverTimestamp()};await set(currentRef,payload);say('questionStatus','질문 전송 완료 · 참가자 응답 대기 중');}catch(e){say('questionStatus','질문 전송 실패: '+(e.code||'')+' '+e.message)}
+};
+async function closeCurrent(){
+ if(!current||!current.active||!current.roundId)return;
+ const roundId=current.roundId,already=await get(ref(db,responsesBase+'/'+roundId));
+ const answers=already.val()||{},teamScores={},teamDetails={};
+ teamNames.forEach(name=>{
+  const members=people.filter(p=>teams[p.uid]===name),submitted=members.map(p=>({p,v:answers[p.uid]})).filter(x=>x.v&&typeof x.v.answer==='string'&&x.v.answer.trim()!=='');
+  const allSame=members.length>0&&submitted.length===members.length&&submitted.every(x=>norm(x.v.answer)===norm(submitted[0].v.answer));
+  teamScores[name]=allSame?1:0;teamDetails[name]={memberCount:members.length,submitted:submitted.length,unanimous:allSame};
+ });
+ const hist={roundId,type:current.type,question:current.question,a:current.a||'',b:current.b||'',answers,teamScores,teamDetails,closedAt:Date.now()};
+ await set(ref(db,historyRef.toString()+'/'+roundId),hist);
+ const next={...scores};teamNames.forEach(n=>next[n]=(Number(next[n])||0)+(teamScores[n]||0));await set(scoreRef,next);
+ await update(currentRef,{active:false,endedAt:serverTimestamp()});
+ say('questionStatus','질문 종료 · 팀별 만장일치 점수를 반영했습니다.');
+}
+$('closeQuestion').onclick=async()=>{try{await closeCurrent()}catch(e){say('questionStatus','질문 종료 실패: '+(e.code||'')+' '+e.message)}};
+function renderLive(){
+ if(!current||!current.active){$('liveResults').innerHTML='<p class="small muted">진행 중인 질문이 없습니다.</p>';return}
+ const entries=Object.entries(responses||{}),total=entries.length;
+ let html='<div class="rule"><b>'+esc(current.question)+'</b><p class="small">응답 '+total+' / 참가자 '+people.length+'명</p>';
+ teamNames.forEach(n=>{const mem=people.filter(p=>teams[p.uid]===n),rows=mem.map(p=>({p,v:responses[p.uid]})).filter(x=>x.v);html+='<p><b>'+esc(n)+'</b> · '+rows.length+'/'+mem.length+'명 응답 · '+(rows.length?rows.map(x=>esc(x.v.display||x.v.answer)).join(' / '):'응답 대기')+'</p>'});
+ html+='</div><div class="small muted">개별 응답 (진행자 전용)</div>'+people.map(p=>'<div class="person"><span>'+esc(p.nickname)+' · '+esc(teams[p.uid]||'팀 미지정')+'</span><span class="answer">'+esc(responses[p.uid]?.display||'미응답')+'</span></div>').join('');$('liveResults').innerHTML=html;
+}
+function renderScores(){
+ const sorted=Object.entries(scores||{}).sort((a,b)=>Number(b[1])-Number(a[1]));
+ $('scoreboard').innerHTML=sorted.length?sorted.map(([n,v],i)=>'<div class="person"><b>'+esc(n)+'</b><span class="stat">'+Number(v||0)+'점</span></div>').join(''):'<p class="small muted">점수가 아직 없습니다.</p>';
+ const ended=gameStatus.active===false&&gameStatus.endedAt;
+ if(ended){$('finalStatus').textContent='게임이 종료되었습니다. 최종 결과가 참가자 화면에도 공개됩니다.';$('finalResults').innerHTML=sorted.map(([n,v],i)=>'<div class="rule"><b>'+(i+1)+'위 · '+esc(n)+'</b><div class="stat">'+Number(v||0)+'점</div></div>').join('');}
+ else {$('finalStatus').textContent='게임 종료 버튼을 누르면 최종 순위가 참가자에게 공개됩니다.';$('finalResults').innerHTML=''}
+}
+$('endGame').onclick=async()=>{
+ if(!confirm('게임을 종료하고 현재까지의 점수로 최종 결과를 공개할까요?'))return;
+ try{if(current&&current.active)await closeCurrent();await set(statusRef,{active:false,endedAt:serverTimestamp()});say('finalStatus','게임 종료 및 결과 공개 완료');}catch(e){say('finalStatus','게임 종료 실패: '+(e.code||'')+' '+e.message)}
+};
+function listeners(){
+ onValue(pRef,s=>{presenceData=s.val()||{};people=Object.entries(presenceData).filter(([uid,p])=>p&&p.online===true).map(([uid,p])=>({uid,nickname:String(p.nickname||'이름 없음')}));renderPeople();renderLive()});
+ onValue(namesRef,s=>{teamNames=Array.isArray(s.val())&&s.val().length?s.val():['1팀','2팀'];renderPeople()});
+ onValue(teamsRef,s=>{teams=s.val()||{};renderPeople();renderLive()});
+ onValue(currentRef,s=>{current=s.val()||null;say('questionStatus',current&&current.active?'진행 중: '+current.question:'진행 중인 질문이 없습니다.');if(stopResponses){stopResponses();stopResponses=null}responses={};if(current&&current.roundId)stopResponses=onValue(ref(db,responsesBase+'/'+current.roundId),a=>{responses=a.val()||{};renderLive()});else renderLive()});
+ onValue(scoreRef,s=>{scores=s.val()||{};renderScores()});
+ onValue(statusRef,s=>{gameStatus=s.val()||{};say('assignStatus',gameStatus.active?'배정 완료 · 게임 진행 중':gameStatus.endedAt?'게임 종료':'미완료');renderScores()});
+ onValue(historyRef,s=>{history=s.val()||{};});
+}
+$('loginBtn').onclick=async()=>{say('loginMsg','로그인 중…');try{await signInWithEmailAndPassword(auth,$('email').value.trim(),$('password').value)}catch(e){say('loginMsg','로그인 실패: '+(e.code||'')+' '+e.message)}};
+onAuthStateChanged(auth,u=>{if(!u){$('loginPanel').classList.remove('hide');$('console').classList.add('hide');$('conn').textContent='로그인 필요';return}if(u.uid!==ADMIN_UID){say('loginMsg','등록된 진행자 계정이 아닙니다.');signOut(auth);return}$('loginPanel').classList.add('hide');$('console').classList.remove('hide');$('conn').textContent='진행자 인증됨';listeners()});
+$('logoutBtn').onclick=()=>signOut(auth);
+</script></body></html>
